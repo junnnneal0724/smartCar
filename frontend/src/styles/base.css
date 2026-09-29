@@ -1,0 +1,202 @@
+/* ============================================================================
+   基础样式：reset + 排版 + 通用原子类
+   只写"车内终端"真正需要的东西，不做通用工具类库。
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* 车机是固定横屏设备，禁止缩放与横向滚动 */
+  -webkit-text-size-adjust: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: 450;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  transition: background var(--d-base) var(--ease-out), color var(--d-base) var(--ease-out);
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 650;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--c-accent);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  /* 车机是触摸屏，去掉移动端点击高亮 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 车内不做精细滚动：滚动条极简，且内容尽量不溢出 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-border-strong);
+  border-radius: 999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-input);
+}
+
+/* ---------------------------------------------------------------- 数字 */
+/* 关键数字必须等宽，否则倒计时/里程会左右跳动 */
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+}
+
+/* ---------------------------------------------------------------- 文本工具 */
+.t-title {
+  font-size: var(--fs-title);
+  font-weight: 650;
+  color: var(--c-text-1);
+}
+.t-sub {
+  font-size: var(--fs-body-s);
+  color: var(--c-text-2);
+}
+.t-muted {
+  font-size: var(--fs-body-s);
+  color: var(--c-text-3);
+}
+.t-caption {
+  font-size: var(--fs-caption);
+  color: var(--c-text-3);
+  letter-spacing: 0.06em;
+}
+.t-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- 容器 */
+.surface {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-card);
+}
+.surface-raised {
+  background: var(--c-surface-raised);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--sh-2);
+}
+.row {
+  display: flex;
+  align-items: center;
+}
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------- 焦点态 */
+/* 车机触摸没有 hover，用 :active 表达"按下去了" */
+.pressable {
+  transition: transform var(--d-fast) var(--ease-out), background var(--d-fast) var(--ease-out),
+    border-color var(--d-fast) var(--ease-out);
+}
+.pressable:active {
+  transform: scale(0.975);
+}
+
+/* 减少动效偏好：保留可用性，去掉装饰性动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+[data-motion="calm"] *,
+[data-motion="calm"] *::before,
+[data-motion="calm"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 80ms !important;
+}

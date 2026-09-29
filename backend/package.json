@@ -1,0 +1,30 @@
+{
+  "name": "@robotaxi/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Robotaxi Demo 后端：gateway(:8080) + app(:8081)，tsc 编译后用原生 node 运行",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/start-all.mjs",
+    "start:app": "node dist/app/main.js",
+    "start:gateway": "node dist/gateway/main.js",
+    "seed": "node scripts/run-seed.mjs",
+    "reset": "node scripts/reset-db.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.0.0",
+    "@nestjs/core": "^12.0.0",
+    "@nestjs/platform-fastify": "^12.0.0",
+    "@fastify/cors": "^11.0.0",
+    "fastify": "^5.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.0"
+  }
+}

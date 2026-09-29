@@ -1,0 +1,200 @@
+/* ============================================================================
+   智行 · 车内交互终端 · 设计令牌
+   ----------------------------------------------------------------------------
+   三条硬规则（详见 docs/02 第 11 章）：
+     1. 深色优先。不是"暗黑科技风"，是夜间行车不刺眼的柔和深蓝灰。
+     2. 全局只有一个 accent 色（柔蓝）。成功/警告/危险是语义色，只小面积使用。
+     3. 层级靠"亮度差 + 1px 描边"，不靠重投影。深色下几乎不用阴影。
+   ========================================================================== */
+
+:root {
+  /* ---- 背景与表面（深蓝灰，避免纯黑的高对比硬边） ---- */
+  --c-bg: #0f1319;
+  --c-surface: #161b22;
+  --c-surface-raised: #1d232c;
+  --c-surface-sunken: #0b0e13;
+  --c-surface-hover: #222937;
+  --c-border: #262d38;
+  --c-border-strong: #333c4a;
+
+  /* ---- 文字 ----
+     对比度是按"车内 50~80cm 观看距离 + 深色屏"实测校准过的（WCAG AA 4.5:1）：
+       text-1 14.5:1 / text-2 7.0:1 / text-3 4.7:1（最差背景 --c-surface-raised）
+     早先的 text-3 (#6c7686) 只有 3.4:1，13px 的次要标签在车里根本读不清。 */
+  --c-text-1: #edf1f7;
+  --c-text-2: #a3adbd;
+  --c-text-3: #828d9e;
+  --c-text-inverse: #0f1319;
+
+  /* ---- 唯一强调色：车内用比手机端更亮一档的柔蓝，保证强光下可读 ---- */
+  --c-accent: #6e9bff;
+  --c-accent-hover: #8fb3ff;
+  --c-accent-press: #5b8cff;
+  --c-accent-weak: #1a2437;
+  --c-accent-border: #2f4a7d;
+  --c-on-accent: #0b1220;
+
+  /* ---- 语义色（车内降饱和，以可读为先） ---- */
+  --c-success: #3dd6b5;
+  --c-success-weak: #122923;
+  --c-warn: #ffa76b;
+  --c-warn-weak: #2c2117;
+  --c-danger: #ff7a7c;
+  --c-danger-weak: #2e1a1c;
+
+  /* ---- 地图（深色路面） ---- */
+  --c-map-bg: #0d1116;
+  --c-map-block: #141920;
+  --c-map-road: #232b36;
+  --c-map-road-main: #303a48;
+  --c-map-road-casing: #3b4655;
+  --c-map-water: #16243a;
+  --c-map-park: #17281f;
+  --c-map-route: #6e9bff;
+  --c-map-route-glow: rgba(110, 155, 255, 0.22);
+  --c-map-route-done: #4a5a72;
+  --c-map-vehicle: #edf1f7;
+  --c-map-vehicle-other: #4d5a6e;
+  --c-map-poi: #7f8a9c;
+
+  /* ---- 圆角：锁死 4 档，比手机端更大更柔 ---- */
+  --r-btn: 999px;
+  --r-card: 24px;
+  --r-panel: 28px;
+  --r-input: 14px;
+  --r-chip: 999px;
+
+  /* ---- 阴影：深色下只留描边与极轻的浮起 ---- */
+  --sh-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --sh-2: 0 0 0 1px var(--c-border), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --sh-3: 0 0 0 1px var(--c-border), 0 24px 60px rgba(0, 0, 0, 0.5);
+  --sh-accent: 0 8px 28px rgba(110, 155, 255, 0.22);
+
+  /* ---- 间距 ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* ---- 排版：车内整体大一档（观看距离 50~80cm） ---- */
+  --fs-caption: 13px;
+  --fs-body-s: 14px;
+  --fs-body: 16px;
+  --fs-title-s: 18px;
+  --fs-title: 20px;
+  --fs-title-l: 24px;
+  --fs-display: 28px;
+  --fs-hero: 44px;
+  --fs-mega: 64px;
+
+  --lh-tight: 1.2;
+  --lh-body: 1.6;
+
+  --font-sans: "Plus Jakarta Sans Variable", "PingFang SC", "HarmonyOS Sans SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: "Plus Jakarta Sans Variable", ui-monospace, "SF Mono", monospace;
+
+  /* ---- 动效：整体放慢，弹簧幅度收敛（车内不做弹跳） ---- */
+  --d-instant: 120ms;
+  --d-fast: 200ms;
+  --d-base: 280ms;
+  --d-slow: 460ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.32, 1.28, 0.6, 1);
+
+  /* ---- 布局骨架尺寸 ---- */
+  --h-statusbar: 56px;
+  --h-functionbar: 88px;
+  --w-tripcard: 360px;
+
+  /* ---- 大字模式倍率（P1 无障碍功能，必须不破版） ---- */
+  --fs-scale: 1;
+
+  color-scheme: dark;
+}
+
+/* 浅色：仅用于白天强光环境，作为备选而非默认 */
+[data-theme="light"] {
+  --c-bg: #eef1f6;
+  --c-surface: #ffffff;
+  --c-surface-raised: #ffffff;
+  --c-surface-sunken: #e4e8ef;
+  --c-surface-hover: #f4f6fa;
+  --c-border: #dde3ec;
+  --c-border-strong: #c6cedb;
+
+  /* 浅色下的 text-3 同样按 4.5:1 校准过（最差背景是 --c-surface-sunken） */
+  --c-text-1: #141a24;
+  --c-text-2: #4e5766;
+  --c-text-3: #5c6472;
+  --c-text-inverse: #ffffff;
+
+  /* 浅色下强调色要压深一档：白字压在 #2f6bff 上只有 4.5:1（正好卡线），
+     而强调色文字压在 --c-accent-weak 上只有 3.8:1。压深后分别是 6.1:1 与 5.1:1。 */
+  --c-accent: #1f56e0;
+  --c-accent-hover: #2a62ea;
+  --c-accent-press: #1746bf;
+  --c-accent-weak: #e4ecff;
+  --c-accent-border: #b9cdff;
+  --c-on-accent: #ffffff;
+
+  --c-success: #0fa98a;
+  --c-success-weak: #e2f6f1;
+  --c-warn: #d97a2b;
+  --c-warn-weak: #fdf0e4;
+  --c-danger: #e0483f;
+  --c-danger-weak: #fdeae8;
+
+  --c-map-bg: #e9edf3;
+  --c-map-block: #e2e7ef;
+  --c-map-road: #ffffff;
+  --c-map-road-main: #f7f9fc;
+  --c-map-road-casing: #cfd7e3;
+  --c-map-water: #d6e4f5;
+  --c-map-park: #dceade;
+  --c-map-route: #2f6bff;
+  --c-map-route-glow: rgba(47, 107, 255, 0.18);
+  --c-map-route-done: #aab6c8;
+  --c-map-vehicle: #141a24;
+  --c-map-vehicle-other: #9aa5b6;
+  --c-map-poi: #8b95a6;
+
+  --sh-1: 0 1px 2px rgba(20, 26, 36, 0.04);
+  --sh-2: 0 0 0 1px var(--c-border), 0 10px 26px rgba(20, 26, 36, 0.07);
+  --sh-3: 0 0 0 1px var(--c-border), 0 20px 48px rgba(20, 26, 36, 0.1);
+  --sh-accent: 0 8px 24px rgba(47, 107, 255, 0.18);
+
+  color-scheme: light;
+}
+
+/* 大字模式：只放大字号相关令牌，布局尺寸不动（避免破版） */
+[data-fontscale="large"] {
+  --fs-caption: 16px;
+  --fs-body-s: 17px;
+  --fs-body: 19px;
+  --fs-title-s: 21px;
+  --fs-title: 23px;
+  --fs-title-l: 28px;
+  --fs-display: 33px;
+  --fs-hero: 52px;
+  --fs-mega: 74px;
+  --h-statusbar: 62px;
+  --h-functionbar: 96px;
+  --w-tripcard: 400px;
+}
+
+/* 高对比模式：供强光环境使用 */
+[data-contrast="high"] {
+  --c-border: #4a5666;
+  --c-text-2: #c8d2e0;
+  --c-text-3: #9aa5b6;
+  --c-accent: #96b7ff;
+}
+
+/* 触控目标豁免标记：元素带 data-touch="compact" 时门槛降到 44px。
+   用于不参与乘客任务动线的次要控件（状态条工具按钮、地图缩放）。
+   豁免必须写在元素上而不是散落在文档里，这样体检脚本看得见、评审也看得见。 */

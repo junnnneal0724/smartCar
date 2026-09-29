@@ -1,0 +1,1336 @@
+{
+  "meta": {
+    "name": "示范新城",
+    "center": {
+      "lng": 116.404,
+      "lat": 39.915
+    },
+    "bounds": {
+      "minLng": 116.379895,
+      "maxLng": 116.427527,
+      "minLat": 39.896258,
+      "maxLat": 39.93392
+    },
+    "note": "合成路网，仅供本地 Demo 使用"
+  },
+  "nodes": [
+    {
+      "id": "N01",
+      "lng": 116.381121,
+      "lat": 39.896475,
+      "name": "复兴街 · 人民大道"
+    },
+    {
+      "id": "N02",
+      "lng": 116.391384,
+      "lat": 39.897514,
+      "name": "新华路 · 人民大道"
+    },
+    {
+      "id": "N03",
+      "lng": 116.399862,
+      "lat": 39.896258,
+      "name": "文化街 · 人民大道"
+    },
+    {
+      "id": "N04",
+      "lng": 116.407898,
+      "lat": 39.897564,
+      "name": "幸福路 · 人民大道"
+    },
+    {
+      "id": "N05",
+      "lng": 116.41786,
+      "lat": 39.896279,
+      "name": "光明街 · 人民大道"
+    },
+    {
+      "id": "N06",
+      "lng": 116.426377,
+      "lat": 39.897687,
+      "name": "振兴路 · 人民大道"
+    },
+    {
+      "id": "N07",
+      "lng": 116.379895,
+      "lat": 39.904895,
+      "name": "复兴街 · 中山路"
+    },
+    {
+      "id": "N08",
+      "lng": 116.389398,
+      "lat": 39.903564,
+      "name": "新华路 · 中山路"
+    },
+    {
+      "id": "N09",
+      "lng": 116.400132,
+      "lat": 39.904539,
+      "name": "文化街 · 中山路"
+    },
+    {
+      "id": "N10",
+      "lng": 116.409543,
+      "lat": 39.90482,
+      "name": "幸福路 · 中山路"
+    },
+    {
+      "id": "N11",
+      "lng": 116.417551,
+      "lat": 39.904843,
+      "name": "光明街 · 中山路"
+    },
+    {
+      "id": "N12",
+      "lng": 116.427527,
+      "lat": 39.903617,
+      "name": "振兴路 · 中山路"
+    },
+    {
+      "id": "N13",
+      "lng": 116.381668,
+      "lat": 39.911749,
+      "name": "复兴街 · 建设大街"
+    },
+    {
+      "id": "N14",
+      "lng": 116.390544,
+      "lat": 39.912154,
+      "name": "新华路 · 建设大街"
+    },
+    {
+      "id": "N15",
+      "lng": 116.398469,
+      "lat": 39.911722,
+      "name": "文化街 · 建设大街"
+    },
+    {
+      "id": "N16",
+      "lng": 116.408346,
+      "lat": 39.912255,
+      "name": "幸福路 · 建设大街"
+    },
+    {
+      "id": "N17",
+      "lng": 116.418615,
+      "lat": 39.910582,
+      "name": "光明街 · 建设大街"
+    },
+    {
+      "id": "N18",
+      "lng": 116.426666,
+      "lat": 39.910455,
+      "name": "振兴路 · 建设大街"
+    },
+    {
+      "id": "N19",
+      "lng": 116.382094,
+      "lat": 39.918918,
+      "name": "复兴街 · 解放路"
+    },
+    {
+      "id": "N20",
+      "lng": 116.390555,
+      "lat": 39.917819,
+      "name": "新华路 · 解放路"
+    },
+    {
+      "id": "N21",
+      "lng": 116.3998,
+      "lat": 39.917931,
+      "name": "文化街 · 解放路"
+    },
+    {
+      "id": "N22",
+      "lng": 116.408247,
+      "lat": 39.919404,
+      "name": "幸福路 · 解放路"
+    },
+    {
+      "id": "N23",
+      "lng": 116.418025,
+      "lat": 39.919373,
+      "name": "光明街 · 解放路"
+    },
+    {
+      "id": "N24",
+      "lng": 116.425904,
+      "lat": 39.918911,
+      "name": "振兴路 · 解放路"
+    },
+    {
+      "id": "N25",
+      "lng": 116.381794,
+      "lat": 39.926895,
+      "name": "复兴街 · 和平大道"
+    },
+    {
+      "id": "N26",
+      "lng": 116.391379,
+      "lat": 39.925718,
+      "name": "新华路 · 和平大道"
+    },
+    {
+      "id": "N27",
+      "lng": 116.399842,
+      "lat": 39.92578,
+      "name": "文化街 · 和平大道"
+    },
+    {
+      "id": "N28",
+      "lng": 116.408861,
+      "lat": 39.92535,
+      "name": "幸福路 · 和平大道"
+    },
+    {
+      "id": "N29",
+      "lng": 116.417551,
+      "lat": 39.925894,
+      "name": "光明街 · 和平大道"
+    },
+    {
+      "id": "N30",
+      "lng": 116.426942,
+      "lat": 39.92624,
+      "name": "振兴路 · 和平大道"
+    },
+    {
+      "id": "N31",
+      "lng": 116.381096,
+      "lat": 39.932875,
+      "name": "复兴街 · 长江路"
+    },
+    {
+      "id": "N32",
+      "lng": 116.390908,
+      "lat": 39.93392,
+      "name": "新华路 · 长江路"
+    },
+    {
+      "id": "N33",
+      "lng": 116.399553,
+      "lat": 39.932726,
+      "name": "文化街 · 长江路"
+    },
+    {
+      "id": "N34",
+      "lng": 116.408817,
+      "lat": 39.933155,
+      "name": "幸福路 · 长江路"
+    },
+    {
+      "id": "N35",
+      "lng": 116.416742,
+      "lat": 39.932559,
+      "name": "光明街 · 长江路"
+    },
+    {
+      "id": "N36",
+      "lng": 116.426796,
+      "lat": 39.933283,
+      "name": "振兴路 · 长江路"
+    }
+  ],
+  "edges": [
+    {
+      "id": "E1",
+      "a": "N01",
+      "b": "N02",
+      "road": "人民大道",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 57,
+      "lanes": 3,
+      "lengthM": 883
+    },
+    {
+      "id": "E2",
+      "a": "N02",
+      "b": "N03",
+      "road": "人民大道",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 59,
+      "lanes": 3,
+      "lengthM": 737
+    },
+    {
+      "id": "E3",
+      "a": "N03",
+      "b": "N04",
+      "road": "人民大道",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 52,
+      "lanes": 3,
+      "lengthM": 701
+    },
+    {
+      "id": "E4",
+      "a": "N04",
+      "b": "N05",
+      "road": "人民大道",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 57,
+      "lanes": 3,
+      "lengthM": 862
+    },
+    {
+      "id": "E5",
+      "a": "N05",
+      "b": "N06",
+      "road": "人民大道",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 59,
+      "lanes": 3,
+      "lengthM": 743
+    },
+    {
+      "id": "E6",
+      "a": "N07",
+      "b": "N08",
+      "road": "中山路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 35,
+      "lanes": 2,
+      "lengthM": 824
+    },
+    {
+      "id": "E7",
+      "a": "N08",
+      "b": "N09",
+      "road": "中山路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 35,
+      "lanes": 2,
+      "lengthM": 922
+    },
+    {
+      "id": "E8",
+      "a": "N10",
+      "b": "N11",
+      "road": "中山路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 34,
+      "lanes": 2,
+      "lengthM": 683
+    },
+    {
+      "id": "E9",
+      "a": "N11",
+      "b": "N12",
+      "road": "中山路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 34,
+      "lanes": 2,
+      "lengthM": 862
+    },
+    {
+      "id": "E10",
+      "a": "N13",
+      "b": "N14",
+      "road": "建设大街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 55,
+      "lanes": 3,
+      "lengthM": 758
+    },
+    {
+      "id": "E11",
+      "a": "N14",
+      "b": "N15",
+      "road": "建设大街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 60,
+      "lanes": 3,
+      "lengthM": 678
+    },
+    {
+      "id": "E12",
+      "a": "N15",
+      "b": "N16",
+      "road": "建设大街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 53,
+      "lanes": 3,
+      "lengthM": 844
+    },
+    {
+      "id": "E13",
+      "a": "N16",
+      "b": "N17",
+      "road": "建设大街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 59,
+      "lanes": 3,
+      "lengthM": 895
+    },
+    {
+      "id": "E14",
+      "a": "N17",
+      "b": "N18",
+      "road": "建设大街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 53,
+      "lanes": 3,
+      "lengthM": 687
+    },
+    {
+      "id": "E15",
+      "a": "N19",
+      "b": "N20",
+      "road": "解放路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 36,
+      "lanes": 2,
+      "lengthM": 732
+    },
+    {
+      "id": "E16",
+      "a": "N20",
+      "b": "N21",
+      "road": "解放路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 34,
+      "lanes": 2,
+      "lengthM": 789
+    },
+    {
+      "id": "E17",
+      "a": "N21",
+      "b": "N22",
+      "road": "解放路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 36,
+      "lanes": 2,
+      "lengthM": 739
+    },
+    {
+      "id": "E18",
+      "a": "N22",
+      "b": "N23",
+      "road": "解放路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 39,
+      "lanes": 2,
+      "lengthM": 834
+    },
+    {
+      "id": "E19",
+      "a": "N25",
+      "b": "N26",
+      "road": "和平大道",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 35,
+      "lanes": 2,
+      "lengthM": 828
+    },
+    {
+      "id": "E20",
+      "a": "N26",
+      "b": "N27",
+      "road": "和平大道",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 31,
+      "lanes": 2,
+      "lengthM": 722
+    },
+    {
+      "id": "E21",
+      "a": "N27",
+      "b": "N28",
+      "road": "和平大道",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 33,
+      "lanes": 2,
+      "lengthM": 771
+    },
+    {
+      "id": "E22",
+      "a": "N28",
+      "b": "N29",
+      "road": "和平大道",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 33,
+      "lanes": 2,
+      "lengthM": 743
+    },
+    {
+      "id": "E23",
+      "a": "N29",
+      "b": "N30",
+      "road": "和平大道",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 33,
+      "lanes": 2,
+      "lengthM": 802
+    },
+    {
+      "id": "E24",
+      "a": "N31",
+      "b": "N32",
+      "road": "长江路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 50,
+      "lanes": 3,
+      "lengthM": 845
+    },
+    {
+      "id": "E25",
+      "a": "N32",
+      "b": "N33",
+      "road": "长江路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 60,
+      "lanes": 3,
+      "lengthM": 749
+    },
+    {
+      "id": "E26",
+      "a": "N33",
+      "b": "N34",
+      "road": "长江路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 60,
+      "lanes": 3,
+      "lengthM": 791
+    },
+    {
+      "id": "E27",
+      "a": "N34",
+      "b": "N35",
+      "road": "长江路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 59,
+      "lanes": 3,
+      "lengthM": 679
+    },
+    {
+      "id": "E28",
+      "a": "N35",
+      "b": "N36",
+      "road": "长江路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 51,
+      "lanes": 3,
+      "lengthM": 861
+    },
+    {
+      "id": "E29",
+      "a": "N01",
+      "b": "N07",
+      "road": "复兴街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 52,
+      "lanes": 3,
+      "lengthM": 942
+    },
+    {
+      "id": "E30",
+      "a": "N07",
+      "b": "N13",
+      "road": "复兴街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 57,
+      "lanes": 3,
+      "lengthM": 777
+    },
+    {
+      "id": "E31",
+      "a": "N13",
+      "b": "N19",
+      "road": "复兴街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 54,
+      "lanes": 3,
+      "lengthM": 798
+    },
+    {
+      "id": "E32",
+      "a": "N19",
+      "b": "N25",
+      "road": "复兴街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 56,
+      "lanes": 3,
+      "lengthM": 887
+    },
+    {
+      "id": "E33",
+      "a": "N25",
+      "b": "N31",
+      "road": "复兴街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 56,
+      "lanes": 3,
+      "lengthM": 668
+    },
+    {
+      "id": "E34",
+      "a": "N02",
+      "b": "N08",
+      "road": "新华路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 37,
+      "lanes": 2,
+      "lengthM": 694
+    },
+    {
+      "id": "E35",
+      "a": "N08",
+      "b": "N14",
+      "road": "新华路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 38,
+      "lanes": 2,
+      "lengthM": 960
+    },
+    {
+      "id": "E36",
+      "a": "N14",
+      "b": "N20",
+      "road": "新华路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 40,
+      "lanes": 2,
+      "lengthM": 630
+    },
+    {
+      "id": "E37",
+      "a": "N26",
+      "b": "N32",
+      "road": "新华路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 40,
+      "lanes": 2,
+      "lengthM": 913
+    },
+    {
+      "id": "E38",
+      "a": "N03",
+      "b": "N09",
+      "road": "文化街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 50,
+      "lanes": 3,
+      "lengthM": 921
+    },
+    {
+      "id": "E39",
+      "a": "N09",
+      "b": "N15",
+      "road": "文化街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 58,
+      "lanes": 3,
+      "lengthM": 811
+    },
+    {
+      "id": "E40",
+      "a": "N15",
+      "b": "N21",
+      "road": "文化街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 58,
+      "lanes": 3,
+      "lengthM": 700
+    },
+    {
+      "id": "E41",
+      "a": "N21",
+      "b": "N27",
+      "road": "文化街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 53,
+      "lanes": 3,
+      "lengthM": 873
+    },
+    {
+      "id": "E42",
+      "a": "N27",
+      "b": "N33",
+      "road": "文化街",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 52,
+      "lanes": 3,
+      "lengthM": 773
+    },
+    {
+      "id": "E43",
+      "a": "N10",
+      "b": "N16",
+      "road": "幸福路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 33,
+      "lanes": 2,
+      "lengthM": 833
+    },
+    {
+      "id": "E44",
+      "a": "N16",
+      "b": "N22",
+      "road": "幸福路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 36,
+      "lanes": 2,
+      "lengthM": 795
+    },
+    {
+      "id": "E45",
+      "a": "N22",
+      "b": "N28",
+      "road": "幸福路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 35,
+      "lanes": 2,
+      "lengthM": 663
+    },
+    {
+      "id": "E46",
+      "a": "N28",
+      "b": "N34",
+      "road": "幸福路",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 40,
+      "lanes": 2,
+      "lengthM": 868
+    },
+    {
+      "id": "E47",
+      "a": "N05",
+      "b": "N11",
+      "road": "光明街",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 30,
+      "lanes": 2,
+      "lengthM": 953
+    },
+    {
+      "id": "E48",
+      "a": "N11",
+      "b": "N17",
+      "road": "光明街",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 38,
+      "lanes": 2,
+      "lengthM": 645
+    },
+    {
+      "id": "E49",
+      "a": "N17",
+      "b": "N23",
+      "road": "光明街",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 39,
+      "lanes": 2,
+      "lengthM": 979
+    },
+    {
+      "id": "E50",
+      "a": "N23",
+      "b": "N29",
+      "road": "光明街",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 40,
+      "lanes": 2,
+      "lengthM": 726
+    },
+    {
+      "id": "E51",
+      "a": "N29",
+      "b": "N35",
+      "road": "光明街",
+      "level": 2,
+      "oneway": false,
+      "speedKph": 33,
+      "lanes": 2,
+      "lengthM": 744
+    },
+    {
+      "id": "E52",
+      "a": "N06",
+      "b": "N12",
+      "road": "振兴路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 54,
+      "lanes": 3,
+      "lengthM": 667
+    },
+    {
+      "id": "E53",
+      "a": "N12",
+      "b": "N18",
+      "road": "振兴路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 53,
+      "lanes": 3,
+      "lengthM": 764
+    },
+    {
+      "id": "E54",
+      "a": "N18",
+      "b": "N24",
+      "road": "振兴路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 56,
+      "lanes": 3,
+      "lengthM": 943
+    },
+    {
+      "id": "E55",
+      "a": "N24",
+      "b": "N30",
+      "road": "振兴路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 60,
+      "lanes": 3,
+      "lengthM": 820
+    },
+    {
+      "id": "E56",
+      "a": "N30",
+      "b": "N36",
+      "road": "振兴路",
+      "level": 1,
+      "oneway": false,
+      "speedKph": 50,
+      "lanes": 3,
+      "lengthM": 783
+    }
+  ],
+  "areas": [
+    {
+      "id": "A1",
+      "kind": "park",
+      "name": "中央公园",
+      "polygon": [
+        [
+          116.391394,
+          39.905359
+        ],
+        [
+          116.396473,
+          39.905359
+        ],
+        [
+          116.396473,
+          39.909927
+        ],
+        [
+          116.391394,
+          39.909927
+        ]
+      ]
+    },
+    {
+      "id": "A2",
+      "kind": "park",
+      "name": "滨河绿地",
+      "polygon": [
+        [
+          116.419585,
+          39.92752
+        ],
+        [
+          116.424762,
+          39.92752
+        ],
+        [
+          116.424762,
+          39.931657
+        ],
+        [
+          116.419585,
+          39.931657
+        ]
+      ]
+    },
+    {
+      "id": "A3",
+      "kind": "water",
+      "name": "清河",
+      "polygon": [
+        [
+          116.409844,
+          39.905263
+        ],
+        [
+          116.414796,
+          39.905263
+        ],
+        [
+          116.414796,
+          39.92486
+        ],
+        [
+          116.409844,
+          39.92486
+        ]
+      ]
+    },
+    {
+      "id": "A4",
+      "kind": "park",
+      "name": "青年湖公园",
+      "polygon": [
+        [
+          116.383799,
+          39.928441
+        ],
+        [
+          116.388903,
+          39.928441
+        ],
+        [
+          116.388903,
+          39.932375
+        ],
+        [
+          116.383799,
+          39.932375
+        ]
+      ]
+    }
+  ],
+  "pois": [
+    {
+      "id": "P001",
+      "name": "首都国际机场 T3",
+      "category": "airport",
+      "aliases": [
+        "机场",
+        "jichang",
+        "T3"
+      ],
+      "nodeId": "N36",
+      "lng": 116.426065,
+      "lat": 39.933257
+    },
+    {
+      "id": "P002",
+      "name": "新城高铁站",
+      "category": "station",
+      "aliases": [
+        "高铁站",
+        "火车站",
+        "gaotiezhan"
+      ],
+      "nodeId": "N01",
+      "lng": 116.380856,
+      "lat": 39.896897
+    },
+    {
+      "id": "P003",
+      "name": "中央公园",
+      "category": "park",
+      "aliases": [
+        "公园",
+        "gongyuan"
+      ],
+      "nodeId": "N08",
+      "lng": 116.389644,
+      "lat": 39.902801
+    },
+    {
+      "id": "P004",
+      "name": "滨河绿地",
+      "category": "park",
+      "aliases": [
+        "绿地",
+        "binhe"
+      ],
+      "nodeId": "N30",
+      "lng": 116.427567,
+      "lat": 39.926394
+    },
+    {
+      "id": "P005",
+      "name": "青年湖公园",
+      "category": "park",
+      "aliases": [
+        "青年湖",
+        "qingnianhu"
+      ],
+      "nodeId": "N25",
+      "lng": 116.381422,
+      "lat": 39.926662
+    },
+    {
+      "id": "P006",
+      "name": "万象城购物中心",
+      "category": "mall",
+      "aliases": [
+        "万象城",
+        "商场",
+        "wanxiangcheng"
+      ],
+      "nodeId": "N15",
+      "lng": 116.398909,
+      "lat": 39.911204
+    },
+    {
+      "id": "P007",
+      "name": "新天地广场",
+      "category": "mall",
+      "aliases": [
+        "新天地",
+        "xintiandi"
+      ],
+      "nodeId": "N10",
+      "lng": 116.409485,
+      "lat": 39.905082
+    },
+    {
+      "id": "P008",
+      "name": "国贸中心",
+      "category": "office",
+      "aliases": [
+        "国贸",
+        "写字楼",
+        "guomao"
+      ],
+      "nodeId": "N21",
+      "lng": 116.400213,
+      "lat": 39.918602
+    },
+    {
+      "id": "P009",
+      "name": "金融街 A 座",
+      "category": "office",
+      "aliases": [
+        "金融街",
+        "jinrongjie"
+      ],
+      "nodeId": "N22",
+      "lng": 116.408586,
+      "lat": 39.919668
+    },
+    {
+      "id": "P010",
+      "name": "科技创新园",
+      "category": "office",
+      "aliases": [
+        "科技园",
+        "kejiyuan"
+      ],
+      "nodeId": "N12",
+      "lng": 116.428163,
+      "lat": 39.903418
+    },
+    {
+      "id": "P011",
+      "name": "市第一人民医院",
+      "category": "hospital",
+      "aliases": [
+        "医院",
+        "yiyuan"
+      ],
+      "nodeId": "N20",
+      "lng": 116.390041,
+      "lat": 39.918535
+    },
+    {
+      "id": "P012",
+      "name": "妇幼保健院",
+      "category": "hospital",
+      "aliases": [
+        "妇幼",
+        "fuyou"
+      ],
+      "nodeId": "N17",
+      "lng": 116.418338,
+      "lat": 39.910642
+    },
+    {
+      "id": "P013",
+      "name": "新城大学",
+      "category": "school",
+      "aliases": [
+        "大学",
+        "daxue"
+      ],
+      "nodeId": "N13",
+      "lng": 116.381865,
+      "lat": 39.911733
+    },
+    {
+      "id": "P014",
+      "name": "第三中学",
+      "category": "school",
+      "aliases": [
+        "中学",
+        "zhongxue"
+      ],
+      "nodeId": "N29",
+      "lng": 116.417391,
+      "lat": 39.926673
+    },
+    {
+      "id": "P015",
+      "name": "实验幼儿园",
+      "category": "school",
+      "aliases": [
+        "幼儿园",
+        "youeryuan"
+      ],
+      "nodeId": "N09",
+      "lng": 116.399752,
+      "lat": 39.904087
+    },
+    {
+      "id": "P016",
+      "name": "阳光里小区",
+      "category": "residence",
+      "aliases": [
+        "阳光里",
+        "yangguangli"
+      ],
+      "nodeId": "N02",
+      "lng": 116.391997,
+      "lat": 39.897058
+    },
+    {
+      "id": "P017",
+      "name": "翡翠公馆",
+      "category": "residence",
+      "aliases": [
+        "翡翠",
+        "feicui"
+      ],
+      "nodeId": "N28",
+      "lng": 116.408588,
+      "lat": 39.925375
+    },
+    {
+      "id": "P018",
+      "name": "清河家园",
+      "category": "residence",
+      "aliases": [
+        "清河",
+        "qinghe"
+      ],
+      "nodeId": "N23",
+      "lng": 116.418715,
+      "lat": 39.919368
+    },
+    {
+      "id": "P019",
+      "name": "梧桐苑",
+      "category": "residence",
+      "aliases": [
+        "梧桐",
+        "wutong"
+      ],
+      "nodeId": "N19",
+      "lng": 116.382802,
+      "lat": 39.918656
+    },
+    {
+      "id": "P020",
+      "name": "云栖公寓",
+      "category": "residence",
+      "aliases": [
+        "云栖",
+        "yunqi"
+      ],
+      "nodeId": "N18",
+      "lng": 116.426322,
+      "lat": 39.909807
+    },
+    {
+      "id": "P021",
+      "name": "市民体育中心",
+      "category": "sports",
+      "aliases": [
+        "体育馆",
+        "tiyu"
+      ],
+      "nodeId": "N27",
+      "lng": 116.399946,
+      "lat": 39.926261
+    },
+    {
+      "id": "P022",
+      "name": "大剧院",
+      "category": "culture",
+      "aliases": [
+        "剧院",
+        "juyuan"
+      ],
+      "nodeId": "N16",
+      "lng": 116.407735,
+      "lat": 39.911708
+    },
+    {
+      "id": "P023",
+      "name": "市图书馆",
+      "category": "culture",
+      "aliases": [
+        "图书馆",
+        "tushuguan"
+      ],
+      "nodeId": "N14",
+      "lng": 116.391239,
+      "lat": 39.911605
+    },
+    {
+      "id": "P024",
+      "name": "博物馆",
+      "category": "culture",
+      "aliases": [
+        "博物馆",
+        "bowuguan"
+      ],
+      "nodeId": "N03",
+      "lng": 116.400146,
+      "lat": 39.895906
+    },
+    {
+      "id": "P025",
+      "name": "美食街",
+      "category": "food",
+      "aliases": [
+        "小吃",
+        "meishi"
+      ],
+      "nodeId": "N04",
+      "lng": 116.408508,
+      "lat": 39.898038
+    },
+    {
+      "id": "P026",
+      "name": "老街茶馆",
+      "category": "food",
+      "aliases": [
+        "茶馆",
+        "chaguan"
+      ],
+      "nodeId": "N07",
+      "lng": 116.380339,
+      "lat": 39.904547
+    },
+    {
+      "id": "P027",
+      "name": "江畔咖啡",
+      "category": "food",
+      "aliases": [
+        "咖啡",
+        "kafei"
+      ],
+      "nodeId": "N24",
+      "lng": 116.426117,
+      "lat": 39.918758
+    },
+    {
+      "id": "P028",
+      "name": "新城会展中心",
+      "category": "venue",
+      "aliases": [
+        "会展",
+        "huizhan"
+      ],
+      "nodeId": "N06",
+      "lng": 116.427139,
+      "lat": 39.89814
+    },
+    {
+      "id": "P029",
+      "name": "奥体公园",
+      "category": "sports",
+      "aliases": [
+        "奥体",
+        "aoti"
+      ],
+      "nodeId": "N05",
+      "lng": 116.417686,
+      "lat": 39.895694
+    },
+    {
+      "id": "P030",
+      "name": "智慧出行体验店",
+      "category": "shop",
+      "aliases": [
+        "体验店",
+        "tiyandian"
+      ],
+      "nodeId": "N32",
+      "lng": 116.390446,
+      "lat": 39.934295
+    },
+    {
+      "id": "P031",
+      "name": "跨境电商产业园",
+      "category": "office",
+      "aliases": [
+        "电商",
+        "dianshang"
+      ],
+      "nodeId": "N31",
+      "lng": 116.381694,
+      "lat": 39.933284
+    },
+    {
+      "id": "P032",
+      "name": "滨江路夜市",
+      "category": "food",
+      "aliases": [
+        "夜市",
+        "yeshi"
+      ],
+      "nodeId": "N36",
+      "lng": 116.426474,
+      "lat": 39.933658
+    }
+  ]
+}

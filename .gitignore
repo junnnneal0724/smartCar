@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 第三方技能库的原始下载包（解压后的内容已在 skills/ 下，压缩包不必入库）
+skills/_download/
+
+# 构建产物
+dist/
+backend/dist/
+frontend/dist/
+*.tsbuildinfo
+
+# 本地数据库（跑 `pnpm seed` 即可重建）
+backend/data/
+
+# 日志与临时文件
+*.log
+*.tmp
+.*.tmpdir/
+
+# 编辑器与系统
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# 环境变量（本 Demo 全部有默认值，不需要 .env）
+.env
+.env.local

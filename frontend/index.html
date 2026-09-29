@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark" data-fontscale="standard">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 车机是固定横屏设备：禁止缩放，并声明横屏 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F1319" />
+    <meta name="description" content="智行 · 车内交互终端 Demo（无人驾驶出租车后排屏幕）" />
+    <!-- 内联图标：车机启动时不该因为一个 favicon 请求失败而在控制台留 404 -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230F1319'/%3E%3Cpath d='M10.5 17.6l1.5-3.5A2 2 0 0 1 13.8 13h4.4a2 2 0 0 1 1.8 1.1l1.5 3.5' stroke='%236E9BFF' stroke-width='2.2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M9 20.4h14M11.4 20.4v2.2M20.6 20.4v2.2' stroke='%236E9BFF' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <title>智行 · 车内交互终端</title>
+    <script>
+      // 在首帧之前落定主题与无障碍开关，避免深浅色闪烁与字号跳变
+      (function () {
+        var root = document.documentElement;
+        try {
+          var theme = localStorage.getItem('robotaxi.theme') || 'dark';
+          var resolved = theme;
+          if (theme === 'auto') {
+            var h = new Date().getHours();
+            resolved = h >= 7 && h < 18 ? 'light' : 'dark';
+          }
+          root.setAttribute('data-theme', resolved);
+          root.setAttribute('data-fontscale', localStorage.getItem('robotaxi.font') || 'standard');
+          root.setAttribute('data-contrast', localStorage.getItem('robotaxi.contrast') || 'normal');
+          root.setAttribute('data-motion', localStorage.getItem('robotaxi.motion') || 'full');
+        } catch (e) {
+          root.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

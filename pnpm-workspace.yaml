@@ -1,0 +1,14 @@
+packages:
+  - backend
+  - frontend
+
+# pnpm 11 把"是否允许依赖执行安装脚本"的名单放在这里（package.json 的 pnpm 字段已不再被读取）。
+#
+# esbuild 的安装脚本只做一件事：校验平台二进制是否存在，缺失时才去下载。
+# 本环境的平台包（@esbuild/win32-x64 等）已经随 optionalDependencies 装好，
+# 脚本无需执行；且当前沙箱禁止父进程用管道 spawn 子进程（EPERM），
+# 因此这里显式标记为 false——是"有意跳过"，不是被静默忽略。
+allowBuilds:
+  esbuild: false
+  '@rolldown/binding-win32-x64-msvc': false
+  lightningcss-win32-x64-msvc: false

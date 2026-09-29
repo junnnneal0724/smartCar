@@ -335,8 +335,14 @@ async function main() {
 
     console.log('\n── 浅色下的行车屏 ────────────────────────────────');
     await api('/ops/ride/restart', { method: 'POST', body: '{}' });
+    // 必须把仿真停住再测这一屏。重开后倍速还停在上一步的 16 倍，
+    // 车会立刻到达上车点，状态机就按设计把页面从 /waiting 弹到 /welcome，
+    // 而那一屏没有地图，于是"画布 0 个"——这是测试的竞态，不是页面的缺陷。
+    await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 1, paused: true }) });
     await cdp.eval(`localStorage.setItem('robotaxi.theme','light');`);
-    await goto('/waiting', { shot: '21-waiting-light', settle: 2400, label: '浅色模式（地图）', expect: ['上车点'], minCanvas: 1 });
+    // 断言必须用只在地图分支里出现的文案：
+    // 空状态的说明里也有"上车点"三个字，用它当断言会漏判分支走错。
+    await goto('/waiting', { shot: '21-waiting-light', settle: 2400, label: '浅色模式（地图）', expect: ['车辆正在前往上车点'], minCanvas: 1, expectRoute: '/waiting' });
     await cdp.eval(`localStorage.setItem('robotaxi.theme','dark');`);
 
     console.log('\n── 控制台 ────────────────────────────────────────');

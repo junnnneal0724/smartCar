@@ -123,27 +123,57 @@ window.__audit = function () {
     }
   }
 
+  // 判断一处"溢出"是不是装饰层造成的假象。
+  // aria-hidden 的绝对定位装饰元素（信息条上流动的光带、扫光这类）靠 transform 动画移动，
+  // 浏览器会把它们的位移算进 scrollWidth，但父级的 overflow:hidden 已经把它们裁住了，
+  // 乘客根本看不到"被切掉的文字"。这类不算缺陷，否则每屏都会误报。
+  const onlyDecorativeOverflow = (el, axis) => {
+    const limit = axis === 'x' ? el.clientWidth : el.clientHeight;
+    let realOverflow = false;
+    for (const d of el.querySelectorAll('*')) {
+      const s = getComputedStyle(d);
+      if (s.position !== 'absolute' || d.getAttribute('aria-hidden') !== 'true') continue;
+      // 装饰层的实际占位（不含 transform）收在容器内 → 溢出来自动画位移，忽略
+      const box = axis === 'x' ? d.offsetLeft + d.offsetWidth : d.offsetTop + d.offsetHeight;
+      if (box > limit + 3) realOverflow = true;
+    }
+    return !realOverflow;
+  };
+
   // 3. 内容被裁：overflow 为 hidden 却有溢出，说明文字被切掉了
   for (const el of document.querySelectorAll('body *')) {
     const cs = getComputedStyle(el);
     const text = (el.textContent || '').trim();
     if (!text) continue;
-    if (el.children.length > 0 && !/^(hidden|clip)$/.test(cs.overflowY) === false) { /* keep */ }
     const clipY = cs.overflowY === 'hidden' || cs.overflowY === 'clip';
     const clipX = cs.overflowX === 'hidden' || cs.overflowX === 'clip';
-    if (clipY && el.scrollHeight > el.clientHeight + 3 && el.clientHeight > 0) {
+    if (clipY && el.scrollHeight > el.clientHeight + 3 && el.clientHeight > 0 && !onlyDecorativeOverflow(el, 'y')) {
       // 允许"可滚动区域"（这类元素通常 overflow:auto），只报 hidden 且差得多的
       out.clipped.push({ el: describe(el), axis: 'y', scrollH: el.scrollHeight, clientH: el.clientHeight });
     }
-    if (clipX && el.scrollWidth > el.clientWidth + 3 && el.clientWidth > 0 && cs.textOverflow !== 'ellipsis') {
+    if (
+      clipX &&
+      el.scrollWidth > el.clientWidth + 3 &&
+      el.clientWidth > 0 &&
+      cs.textOverflow !== 'ellipsis' &&
+      !onlyDecorativeOverflow(el, 'x')
+    ) {
       out.clipped.push({ el: describe(el), axis: 'x', scrollW: el.scrollWidth, clientW: el.clientWidth });
     }
   }
   out.clipped = out.clipped.slice(0, 20);
 
-  // 4. 元素跑到视口外
+  // 4. 元素跑到视口外（同样忽略被父级裁住的 aria-hidden 装饰层）
+  const isClippedDecoration = (el) => {
+    if (el.getAttribute('aria-hidden') !== 'true') return false;
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      const s = getComputedStyle(n);
+      if (s.overflowX === 'hidden' || s.overflowX === 'clip') return true;
+    }
+    return false;
+  };
   for (const el of document.querySelectorAll('body *')) {
-    if (!visible(el)) continue;
+    if (!visible(el) || isClippedDecoration(el)) continue;
     const r = el.getBoundingClientRect();
     if (r.right > innerWidth + 4 || r.left < -4) {
       out.offscreen.push({ el: describe(el), left: Math.round(r.left), right: Math.round(r.right) });
@@ -319,57 +349,101 @@ async function main() {
     await cdp.send('Runtime.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 
-    // 把后端推到"行程中"，这样乘客能到的所有页面都可以体检。
-    // 必须按状态机的顺序推进：重开 -> 等车到（ABOARD）-> 校验 -> 开始行程。
-    await api('/ops/ride/restart', { method: 'POST', body: '{}' });
-    await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16, paused: false }) });
-    let state = '';
-    for (let i = 0; i < 90; i++) {
-      state = (await api('/session/bootstrap')).state;
-      if (state === 'WELCOME' || state === 'READY') break;
-      await sleep(400);
-    }
-    if (state !== 'WELCOME' && state !== 'READY') throw new Error(`等不到上车状态，当前 state=${state}`);
-
-    const row = (await api('/ops/table/t_ride?limit=1')).rows[0];
-    const token = (await api('/session/verify', { method: 'POST', body: JSON.stringify({ code: String(row.verify_code) }) })).token;
-    await api('/ride/start', { method: 'POST', body: '{}', headers: { authorization: `Bearer ${token}` } });
-    // 先让车真的跑一小段，累积轨迹点，这样 /summary 的速度曲线才有数据可画；
-    // 然后冻住仿真，避免体检期间布局一直在变。
-    await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16, paused: false }) });
-    await new Promise((r) => setTimeout(r, 6000));
-    await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 2, paused: true }) });
-
-    await cdp.send('Page.navigate', { url: `${APP}/trip` });
-    await cdp.waitFor('(document.querySelector("#app")?.innerText?.length ?? 0) > 24', 12_000);
-    await cdp.eval(`sessionStorage.setItem('robotaxi.ride.token', ${JSON.stringify(token)}); ${AUDIT_FN}`);
-
-    const routes = process.argv.slice(2).filter((a) => a.startsWith('/'));
-    const targets = routes.length
-      ? routes
-      : ['/trip', '/cabin', '/stop', '/destination', '/help', '/preferences', '/trip/explain', '/summary', '/rate', '/idle'];
-
-    for (const route of targets) {
+    // 体检必须分阶段推进：状态机决定了哪些屏在当前状态才存在，
+    // 一次只把后端推到某一个状态，只量那个状态下乘客真能看到的屏。
+    const auditRoute = async (route) => {
       await cdp.send('Page.navigate', { url: `${APP}${route}` });
       await cdp.waitFor('(document.querySelector("#app")?.innerText?.length ?? 0) > 24', 12_000);
       await sleep(2200);
       await cdp.eval(AUDIT_FN);
       report[route] = JSON.parse(await cdp.eval(`JSON.stringify(window.__audit())`));
-    }
+    };
 
-    // 浅色主题只抽查两屏：深色是默认，浅色是强光环境下的备选，
-    // 但对比度这条在浅色下更容易出问题，必须真的量过。
-    await cdp.eval(`localStorage.setItem('robotaxi.theme','light');`);
-    for (const route of ['/trip', '/summary']) {
-      if (!targets.includes(route) && routes.length) continue;
-      await cdp.send('Page.navigate', { url: `${APP}${route}` });
+    const waitState = async (want, tries = 90) => {
+      for (let i = 0; i < tries; i++) {
+        const s = (await api('/session/bootstrap')).state;
+        if (want.includes(s)) return s;
+        await sleep(400);
+      }
+      throw new Error(`等不到状态 ${want.join('/')}`);
+    };
+
+    const routes = process.argv.slice(2).filter((a) => a.startsWith('/'));
+    if (routes.length) {
+      // 指定路由时只在"行程中"这一个状态下量，方便改完某一屏单独复检
+      await api('/ops/ride/restart', { method: 'POST', body: '{}' });
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16, paused: false }) });
+      await waitState(['WELCOME', 'READY']);
+      const row = (await api('/ops/table/t_ride?limit=1')).rows[0];
+      const tk = (await api('/session/verify', { method: 'POST', body: JSON.stringify({ code: String(row.verify_code) }) })).token;
+      await api('/ride/start', { method: 'POST', body: '{}', headers: { authorization: `Bearer ${tk}` } });
+      await sleep(6000);
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 2, paused: true }) });
+      await cdp.send('Page.navigate', { url: `${APP}/trip` });
       await cdp.waitFor('(document.querySelector("#app")?.innerText?.length ?? 0) > 24', 12_000);
-      await sleep(2000);
+      await cdp.eval(`sessionStorage.setItem('robotaxi.ride.token', ${JSON.stringify(tk)}); ${AUDIT_FN}`);
+      for (const r of routes) await auditRoute(r);
+      ws.close();
+    } else {
+      // ---- 阶段 1：等车（WAITING）----
+      await api('/ops/ride/restart', { method: 'POST', body: '{}' });
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 1, paused: true }) });
+      await cdp.send('Page.navigate', { url: `${APP}/idle` });
+      await cdp.waitFor('(document.querySelector("#app")?.innerText?.length ?? 0) > 24', 12_000);
       await cdp.eval(AUDIT_FN);
-      report[`${route} (浅色)`] = JSON.parse(await cdp.eval(`JSON.stringify(window.__audit())`));
+      for (const r of ['/idle', '/waiting', '/ops']) await auditRoute(r);
+
+      // ---- 阶段 2：车辆已到，等乘客核对身份（WELCOME）----
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16, paused: false }) });
+      await waitState(['WELCOME', 'READY']);
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 1, paused: true }) });
+      for (const r of ['/welcome', '/verify']) await auditRoute(r);
+
+      // ---- 阶段 3：校验通过，等乘客按开始行程（READY）----
+      const row = (await api('/ops/table/t_ride?limit=1')).rows[0];
+      const token = (await api('/session/verify', { method: 'POST', body: JSON.stringify({ code: String(row.verify_code) }) })).token;
+      await cdp.eval(`sessionStorage.setItem('robotaxi.ride.token', ${JSON.stringify(token)});`);
+      await auditRoute('/ready');
+
+      // ---- 阶段 4：行程中（TRIP）----
+      await api('/ride/start', { method: 'POST', body: '{}', headers: { authorization: `Bearer ${token}` } });
+      // 先让车真的跑一小段累积轨迹点（否则 /summary 的速度曲线没有数据可画），再冻住
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16, paused: false }) });
+      await sleep(6000);
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 2, paused: true }) });
+      for (const r of ['/trip', '/cabin', '/stop', '/destination', '/help', '/preferences', '/trip/explain', '/share']) {
+        await auditRoute(r);
+      }
+
+      // ---- 阶段 5：即将到达与下车（ARRIVING / ARRIVED）----
+      await api('/ops/ride/jump-arriving', { method: 'POST', body: '{}' });
+      await waitState(['ARRIVING', 'ARRIVED']);
+      await auditRoute('/arriving');
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16, paused: false }) });
+      await waitState(['ARRIVED']);
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 1, paused: true }) });
+      await auditRoute('/alight');
+
+      // ---- 阶段 6：收尾（SUMMARY）----
+      await api('/ride/open-door', { method: 'POST', body: '{}', headers: { authorization: `Bearer ${token}` } });
+      await api('/ride/complete', { method: 'POST', body: '{}', headers: { authorization: `Bearer ${token}` } });
+      await sleep(800);
+      for (const r of ['/summary', '/rate', '/farewell']) await auditRoute(r);
+
+      // ---- 浅色主题抽查 ----
+      // 深色是默认，浅色是强光环境下的备选；对比度这条在浅色下更容易出问题，
+      // 必须真的量过，而且要挑"文字最密"和"图形最多"的屏。
+      await cdp.eval(`localStorage.setItem('robotaxi.theme','light');`);
+      for (const r of ['/trip', '/summary', '/cabin']) {
+        await cdp.send('Page.navigate', { url: `${APP}${r}` });
+        await cdp.waitFor('(document.querySelector("#app")?.innerText?.length ?? 0) > 24', 12_000);
+        await sleep(2000);
+        await cdp.eval(AUDIT_FN);
+        report[`${r} (浅色)`] = JSON.parse(await cdp.eval(`JSON.stringify(window.__audit())`));
+      }
+      await cdp.eval(`localStorage.setItem('robotaxi.theme','dark');`);
+      ws.close();
     }
-    await cdp.eval(`localStorage.setItem('robotaxi.theme','dark');`);
-    ws.close();
   } finally {
     child.kill();
     await sleep(250);
@@ -405,6 +479,7 @@ async function main() {
     if (d.canvases.length) console.log(`  画布：${d.canvases.map((c) => `${c.w}x${c.h} ${c.painted ? 'ok' : '空白'} (${c.note})`).join(' | ')}`);
     for (const s of d.small.slice(0, 6)) console.log(`   · 触控 ${s.w}x${s.h} < ${s.min}  ${s.el}`);
     for (const c of d.clipped.slice(0, 4)) console.log(`   · 裁切[${c.axis}] ${c.el}  ${c.scrollW ?? c.scrollH} > ${c.clientW ?? c.clientH}`);
+    for (const o of d.offscreen.slice(0, 4)) console.log(`   · 出界 ${o.el}  left=${o.left} right=${o.right}（视口 ${d.viewport.w}）`);
     for (const c of d.lowContrast.slice(0, 5)) console.log(`   · 对比 ${c.ratio}:1 < ${c.need}  ${c.size}px  ${c.el}  ${c.color} on ${c.bg}`);
     for (const [rad, els] of Object.entries(d.radii)) console.log(`   · 圆角 ${rad} 非令牌  ${els.join(', ')}`);
     issues += problems.length;

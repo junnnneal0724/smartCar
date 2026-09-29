@@ -203,15 +203,33 @@ async function main() {
     await cdp.send('Log.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 
-    /** 打开一屏：等真的渲染出内容（而不是靠猜选择器），再断言关键文案 */
+    /**
+     * 打开一屏：等真的渲染出内容（而不是靠猜选择器），再断言关键文案。
+     *
+     * 注意"文字长度 > 24"这条本身不可靠——外壳的状态条加行程卡就有 150 多字，
+     * 路由组件（懒加载 chunk）还没挂上来时它就已经成立了，
+     * 于是会把一张空页面当成渲染成功。所以必须同时确认主内容区里有东西，
+     * 并且把常驻的"返回"按钮排除掉。
+     */
+    const READY = `(() => {
+      const app = document.querySelector('#app');
+      if (!app) return false;
+      const main = document.querySelector('.shell__main');
+      if (main && !main.querySelector(':scope > *:not(.shell__back)')) return false;
+      return (app.innerText?.length ?? 0) > 24;
+    })()`;
     const goto = async (route, { shot, settle = 900, label, expect, expectRoute, minCanvas = 0 } = {}) => {
       await cdp.send('Page.navigate', { url: `${APP}${route}` });
-      const ok = await cdp.waitFor('(document.querySelector("#app")?.innerText?.length ?? 0) > 24', 14_000);
+      const ok = await cdp.waitFor(READY, 14_000);
       await sleep(settle);
       const info = JSON.parse(
         await cdp.eval(`JSON.stringify({
           path: location.pathname,
           canvas: document.querySelectorAll("canvas").length,
+          mounted: (() => {
+            const main = document.querySelector('.shell__main');
+            return main ? !!main.querySelector(':scope > *:not(.shell__back)') : true;
+          })(),
           text: (document.querySelector("#app")?.innerText ?? "").replace(/\\s+/g," ")
         })`),
       );
@@ -220,7 +238,11 @@ async function main() {
       if (expectRoute) {
         record(`${name} 落到正确路由`, info.path === expectRoute, `实际 ${info.path}`);
       }
-      record(`${name} 渲染出内容`, ok, `${info.text.length} 字`);
+      record(
+        `${name} 渲染出内容`,
+        ok && info.mounted,
+        info.mounted ? `${info.text.length} 字` : `${info.text.length} 字，但主内容区是空的（路由组件没挂上来）`,
+      );
       // 光看文字长度是不够的：图表走了空状态时页面照样有文字，
       // 只有数一数 canvas 才能确认图真的画出来了。
       // 这里用轮询而不是固定 sleep：ECharts 是在数据到位后的下一帧才建画布，
@@ -236,8 +258,26 @@ async function main() {
         if (count >= minCanvas) {
           record(`${name} 图表已绘制`, true, `画布 ${count} 个（${waited}ms）`);
         } else {
-          const shown = await cdp.eval('(document.querySelector("#app")?.innerText ?? "").replace(/\\s+/g," ").slice(0, 90)');
-          record(`${name} 图表已绘制`, false, `9 秒内只出现 ${count} 个画布（需 ≥${minCanvas}）；页面文字: ${shown}`);
+          // 失败时把"当前到底是什么分支"一并打出来：
+          // 只看文字长度分不清是走了空状态、还是内容渲染到一半。
+          const diag = JSON.parse(
+            await cdp.eval(`JSON.stringify({
+              path: location.pathname,
+              theme: document.documentElement.getAttribute("data-theme"),
+              map: !!document.querySelector(".waiting__map, .map"),
+              empty: !!document.querySelector(".waiting__empty, .empty"),
+              canvases: document.querySelectorAll("canvas").length,
+              firstKid: document.querySelector("#app")?.firstElementChild?.className ?? "",
+              text: (document.querySelector("#app")?.innerText ?? "").replace(/\\s+/g," ").slice(0, 300)
+            })`),
+          );
+          record(
+            `${name} 图表已绘制`,
+            false,
+            `9 秒内只出现 ${count} 个画布（需 ≥${minCanvas}）；` +
+              `路由=${diag.path} 主题=${diag.theme} 地图容器=${diag.map} 空状态=${diag.empty} 外壳=${diag.firstKid}\n` +
+              `        页面文本: ${diag.text}`,
+          );
         }
       }
       if (expect) {

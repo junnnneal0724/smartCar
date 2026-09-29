@@ -120,7 +120,7 @@ function goBack(): void {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 48px;
+  min-height: 56px;
   padding: 0 var(--sp-4) 0 var(--sp-3);
   border-radius: var(--r-chip);
   background: color-mix(in srgb, var(--c-surface) 86%, transparent);

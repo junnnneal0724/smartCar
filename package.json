@@ -15,7 +15,7 @@
     "test:api": "node scripts/smoke.mjs",
     "test:ui": "node scripts/ui-walkthrough.mjs",
     "test:ui-audit": "node scripts/ui-audit.mjs",
-    "check": "pnpm typecheck && pnpm test:api && pnpm test:ui && pnpm test:ui-audit"
+    "check": "pnpm typecheck && pnpm build && pnpm test:api && pnpm test:ui && pnpm test:ui-audit"
   },
   "engines": {
     "node": ">=22"

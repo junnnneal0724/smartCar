@@ -122,13 +122,22 @@ pnpm check               # 上面四项全跑一遍
 | 脚本 | 回答什么问题 | 现状 |
 | --- | --- | --- |
 | `smoke.mjs` | 业务链路和接口契约对不对 | 43/43 |
-| `ui-walkthrough.mjs` | 19 个页面在真浏览器里能不能渲染出来、该跳的跳不跳 | 52/52 |
-| `ui-audit.mjs` | 渲染出来的东西**是否可读、可点、不破版** | 12 屏 0 项待处理 |
+| `ui-walkthrough.mjs` | 19 个页面在真浏览器里能不能渲染出来、该跳的跳不跳 | 53/53 |
+| `ui-audit.mjs` | 渲染出来的东西**是否可读、可点、不破版** | 22 屏 0 项待处理 |
 
 `ui-walkthrough.mjs` 会把每一屏截图写到 `.walkthrough/`，可以直接当作 Demo 的界面预览。
+注意这些截图是**跑一次就重新生成一次**的：状态条上的时间每次都不同，所以跑完走查后
+`git status` 会显示 21 张图片有改动，这是预期的，不是界面变了。
 `ui-audit.mjs` 不截图，它在真实渲染的页面上量尺寸：文本与背景的对比度（WCAG AA）、
 触控目标是否够大、有没有内容被裁掉或横向溢出、圆角是否只用令牌里的那几档、
 以及 Canvas 是否真的画出了东西（图表走空状态时 DOM 看起来是正常的，只有数画布才发现得了）。
+它按状态机的顺序分 6 个阶段推进后端（等车 → 核对身份 → 出发确认 → 行程中 → 到达下车 → 收尾），
+因为这 19 屏并不是在任何状态下都同时存在；浅色主题另外抽查 3 屏，
+所以总数是 22 屏。改完某一屏想单独复检，可以在命令后面直接跟路由，例如：
+
+```bash
+node scripts/ui-audit.mjs /summary /cabin
+```
 
 ---
 
@@ -139,13 +148,23 @@ pnpm check               # 上面四项全跑一遍
 | Node.js | ≥ 22（需要内置 `node:sqlite`） | v24.21.0 ✅ |
 | pnpm | ≥ 9 | 11.7.0 ✅ |
 
-**网络**：本机直连 `registry.npmjs.org` 只有 20~40 KiB/s，安装 echarts / naive-ui 这类大包必然超时。
+**网络**：本机直连 `registry.npmjs.org` 只有 20~40 KiB/s，安装 echarts / typescript 这类大包必然超时。
 项目根目录的 `.npmrc` 已固定使用 `registry.npmmirror.com`（实测快约 100 倍），**不要改回官方源**。
 
 **为什么后端用 `tsc` 编译而不是 `tsx` 直接跑 TS**：
 NestJS 的依赖注入依赖 TypeScript 的 `emitDecoratorMetadata` 产出 `design:paramtypes`，
 而 esbuild（tsx 的底层）明确不支持该能力，会导致所有构造器注入拿到 `undefined`。
 所以启动流程是 `tsc` 编译一次 → 原生 node 跑 `dist/`，顺带也更快。
+
+**走查偶发失败时先清 Vite 的预构建缓存**：
+改过依赖（增删 `package.json` 里的大包）或者移动过项目目录之后，
+`frontend/node_modules/.vite` 里缓存的依赖预构建结果会跟实际依赖对不上，
+表现是某些懒加载的路由 chunk 迟迟不落地，某个页面看起来"渲染了个空壳"。
+清掉它再重启即可，这不是代码问题：
+
+```bash
+rm -rf frontend/node_modules/.vite && pnpm dev
+```
 
 ---
 
@@ -188,8 +207,8 @@ NestJS 的依赖注入依赖 TypeScript 的 `emitDecoratorMetadata` 产出 `desi
 - [x] 前端：设计令牌、路由、API 层、5 个 store、自绘地图引擎
 - [x] 前端：车机骨架布局与共享组件（状态条 / 行程卡 / 功能条 / 决策气泡 / 长按按钮）
 - [x] 前端：19 个页面与 3 个 ECharts 图表
-- [x] 浏览器实际渲染走查 52/52 通过，21 屏截图在 `.walkthrough/`
-- [x] 界面体检 12 屏 0 项待处理（对比度 / 触控 / 溢出 / 圆角 / 画布）
+- [x] 浏览器实际渲染走查 53/53 通过，21 屏截图在 `.walkthrough/`
+- [x] 界面体检 22 屏 0 项待处理（对比度 / 触控 / 溢出 / 圆角 / 画布）
 - [x] 演示脚本与 FAQ（`docs/06-演示脚本.md`）
 
 ### 渲染走查与体检发现并修掉的问题

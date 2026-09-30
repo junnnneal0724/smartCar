@@ -12,6 +12,7 @@ import { useSessionStore } from '@/stores/session';
 import { useRideStore } from '@/stores/ride';
 import { useRealtimeStore } from '@/stores/realtime';
 import { useCabinStore } from '@/stores/cabin';
+import { useUiStore } from '@/stores/ui';
 import type { ScreenState } from '@/api/types';
 
 const route = useRoute();
@@ -20,6 +21,7 @@ const session = useSessionStore();
 const ride = useRideStore();
 const realtime = useRealtimeStore();
 const cabin = useCabinStore();
+const ui = useUiStore();
 
 const booting = ref(true);
 let pollTimer: number | null = null;
@@ -76,6 +78,16 @@ function applyStateRoute(state: ScreenState): void {
   const cur = route.path;
   if (cur === target) return;
   if (!HANDOFF[state].includes(cur)) return;
+
+  // 手指还按在屏幕上就绝不换屏。车辆进入"即将到达"时后端会立刻推状态，
+  // 如果乘客此刻正在拖地图，页面就会在他手指底下消失——看起来就像
+  // "一拖动地图就跳到了停靠页"，其实跳转跟拖动没有因果关系，只是撞在一起了。
+  if (ui.isInteracting()) return;
+
+  // 乘客手动拖过地图，这一屏就归他：他要自己看位置，谁也别收走。
+  // 状态变化本身不会丢——底部的停靠页入口、以及到站后地图上的提示卡都还在。
+  if (cur === '/trip' && ui.mapManual) return;
+
   router.replace(target);
 }
 
@@ -91,6 +103,12 @@ async function bootstrap(): Promise<void> {
 }
 
 onMounted(async () => {
+  // 全局记录"手指是否在屏幕上"。用捕获阶段，保证任何页面的手势都算数，
+  // 不依赖各页面自己上报。
+  window.addEventListener('pointerdown', onGlobalDown, true);
+  window.addEventListener('pointerup', onGlobalUp, true);
+  window.addEventListener('pointercancel', onGlobalUp, true);
+
   await bootstrap();
   await cabin.load().catch(() => undefined);
   await ride.refresh().catch(() => undefined);
@@ -114,9 +132,19 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (pollTimer !== null) clearInterval(pollTimer);
+  window.removeEventListener('pointerdown', onGlobalDown, true);
+  window.removeEventListener('pointerup', onGlobalUp, true);
+  window.removeEventListener('pointercancel', onGlobalUp, true);
   realtime.disconnect();
   ride.stopCountdown();
 });
+
+function onGlobalDown(): void {
+  ui.setTouching(true);
+}
+function onGlobalUp(): void {
+  ui.setTouching(false);
+}
 
 // 后端状态一变，立刻重新对齐（不等轮询）
 watch(

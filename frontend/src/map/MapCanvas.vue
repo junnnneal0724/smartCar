@@ -13,6 +13,7 @@ import { RoadGraph } from '@/map/path';
 import { useRideStore } from '@/stores/ride';
 import { useRealtimeStore } from '@/stores/realtime';
 import { useSessionStore } from '@/stores/session';
+import { useUiStore } from '@/stores/ui';
 import { rideApi } from '@/api';
 
 const props = withDefaults(
@@ -38,6 +39,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const ride = useRideStore();
 const realtime = useRealtimeStore();
 const session = useSessionStore();
+const ui = useUiStore();
 
 const following = ref(props.follow);
 const scale = ref(props.scale);
@@ -135,7 +137,11 @@ function onPointerMove(e: PointerEvent): void {
   const dy = e.clientY - lastY;
   lastX = e.clientX;
   lastY = e.clientY;
-  if (Math.abs(dx) + Math.abs(dy) > 2) following.value = false;
+  if (Math.abs(dx) + Math.abs(dy) > 2) {
+    following.value = false;
+    // 告诉外壳：这一屏的视角乘客自己拿着，状态机别再把它收走
+    ui.setMapManual(true);
+  }
   // 直接改相机中心：拖动时不需要平滑，否则手指和地图会"脱手"
   const cam = (engine as unknown as { cam: { center: LngLat; scale: number } }).cam;
   const cosLat = Math.cos((cam.center.lat * Math.PI) / 180);
@@ -184,6 +190,7 @@ function zoomBy(f: number): void {
 
 function recenter(): void {
   following.value = true;
+  ui.setMapManual(false);
 }
 
 defineExpose({ zoomBy, recenter, setScale });
@@ -195,6 +202,8 @@ let themeObserver: MutationObserver | null = null;
 let roTimer: number | null = null;
 
 onMounted(() => {
+  // 新挂上来的地图默认跟随车辆，控制权交还状态机
+  ui.setMapManual(false);
   if (!canvasRef.value) return;
   engine = new MapEngine(canvasRef.value, mapData, { center: mapData.meta.center, scale: scale.value });
   engine.setSceneProvider(buildScene);

@@ -328,6 +328,23 @@ async function main() {
     console.log('\n── 行程中（功能条必须真的能跳转） ────────────────');
     await goto('/trip', { shot: '07-trip', settle: 3600, label: '行程主屏（自绘地图）', expect: ['目的地', '预计还需'], minCanvas: 1 });
 
+    // 合成一次拖动手势：真的派发 pointerdown/move/up，页面的拖动逻辑才会走一遍
+    // （相机跟着动、视角归属标记也要跟着变），只是不经过浏览器的手势识别。
+    const DRAG_MAP = `(() => {
+      const c = document.querySelector('.map__canvas');
+      if (!c) return false;
+      const r = c.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      const ev = (t, cx, cy) =>
+        c.dispatchEvent(new PointerEvent(t, { clientX: cx, clientY: cy, pointerId: 1, bubbles: true, pointerType: 'mouse' }));
+      ev('pointerdown', x, y);
+      for (let i = 1; i <= 8; i++) ev('pointermove', x - i * 40, y - i * 6);
+      ev('pointerup', x - 320, y - 48);
+      return true;
+    })()`;
+    const hintText = `document.querySelector('.map__hint')?.innerText?.trim() ?? ''`;
+
     // 地图必须能手动拖动，而且松手之后不能被拽回中心。
     // 相机是否被拉回没法从 DOM 上看出来，所以用画布像素签名来判断：
     // 拖动前后、以及静置一段时间之后，画面都应该显著不同于拖动之前。
@@ -342,18 +359,6 @@ async function main() {
         for (let i = 0; i < d.length; i += 997 * 4) out.push(d[i], d[i + 1], d[i + 2]);
         return out;
       })()`;
-      const DRAG = `(() => {
-        const c = document.querySelector('.map__canvas');
-        if (!c) return;
-        const r = c.getBoundingClientRect();
-        const x = r.left + r.width / 2;
-        const y = r.top + r.height / 2;
-        const ev = (t, cx, cy) =>
-          c.dispatchEvent(new PointerEvent(t, { clientX: cx, clientY: cy, pointerId: 1, bubbles: true, pointerType: 'mouse' }));
-        ev('pointerdown', x, y);
-        for (let i = 1; i <= 8; i++) ev('pointermove', x - i * 40, y - i * 6);
-        ev('pointerup', x - 320, y - 48);
-      })()`;
       const ratio = (a, b) => {
         if (!a || !b || a.length !== b.length) return -1;
         let n = 0;
@@ -366,7 +371,7 @@ async function main() {
       await api('/ops/sim', { method: 'POST', body: JSON.stringify({ paused: true }) });
       await sleep(700);
       const before = await cdp.eval(SIG);
-      await cdp.eval(DRAG);
+      await cdp.eval(DRAG_MAP);
       await sleep(350);
       const dragged = await cdp.eval(SIG);
       await sleep(2600);
@@ -377,6 +382,20 @@ async function main() {
       record('地图松手后不弹回中心', kept > 0.12, `静置 2.6 秒后仍与拖动前不同 ${(kept * 100).toFixed(0)}%`);
       await cdp.screenshot(path.join(OUT, '07b-trip-panned.png'));
       await api('/ops/sim', { method: 'POST', body: JSON.stringify({ paused: false }) });
+
+      // 拖过之后视角归乘客：角落提示变成"已锁定视角"，并且给出"回到车辆"。
+      // 这一条是"状态机不许再收走这一屏"的前置条件，所以要单独断言。
+      const locked = await cdp.eval(hintText);
+      record('拖动后地图视角归乘客控制', locked.includes('已锁定'), `角落提示「${locked}」`);
+      const back = await cdp.eval(`(() => {
+        const b = document.querySelector('.map__tools .tool--accent');
+        if (!b) return false;
+        b.click();
+        return true;
+      })()`);
+      await sleep(500);
+      const backHint = await cdp.eval(hintText);
+      record('点"回到车辆"能把视角交还出去', back && backHint.includes('跟随'), `角落提示「${backHint}」`);
     }
 
     await goto('/cabin', { shot: '08-cabin', settle: 1500, label: '座舱环境控制', expect: ['舒缓'] });
@@ -391,8 +410,39 @@ async function main() {
     // 行程小结里的速度曲线会走空状态，截图就不能代表真实演示效果。
     await api('/ops/sim', { method: 'POST', body: JSON.stringify({ multiplier: 16 }) });
     await sleep(9000);
-    await api('/ops/ride/jump-arriving', { method: 'POST', body: '{}' });
-    await sleep(1200);
+
+    // 车辆一进入"即将到达"，后端就推状态，/trip 会被接管到 /arriving——
+    // 而 /arriving 底部高亮的是"停靠"、文案也全是靠边停靠，所以乘客看到的是
+    // "我一拖动地图就跳到停靠页"。真实原因是状态机换屏和拖动撞在了一起：
+    // 手指还在图上，页面就没了。拖过地图之后这一屏归乘客，谁也别收走。
+    {
+      // 冻结仿真：这一段要看的是"状态机有没有越权换屏"，
+      // 车要是继续跑就会顺带跑到"已到达"，把两件事混在一起。
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ paused: true }) });
+      await goto('/trip', { settle: 1600, label: '行程地图（手动拖过之后等待到达）', minCanvas: 1 });
+      await cdp.eval(DRAG_MAP);
+      await sleep(500);
+      record('拖动后视角归乘客（为下一步做准备）', (await cdp.eval(hintText)).includes('已锁定'));
+      await api('/ops/ride/jump-arriving', { method: 'POST', body: '{}' });
+      // 跨过一次 8 秒兜底轮询：状态机有充分机会把这一屏收走
+      await sleep(9500);
+      const stayed = await cdp.eval('location.pathname');
+      record('拖过地图后，"即将到达"不会收走行程页', stayed === '/trip', `实际 ${stayed}`);
+      await cdp.screenshot(path.join(OUT, '14a-trip-kept-after-manual-pan.png'));
+
+      // 反过来也要成立：没碰过地图的乘客，仍然由状态机按时带到到达屏。
+      // 不然"修好了跳到停靠页"就变成了"永远看不到到达屏"。
+      // 用裸导航而不是 goto：这里要看的正是"落在 /trip 之后被接管走"，
+      // 走 goto 会把中间过程吃掉。
+      await cdp.send('Page.navigate', { url: `${APP}/trip` });
+      const handedOff = await cdp.waitFor(
+        `location.pathname === '/arriving' || location.pathname === '/alight'`,
+        12_000,
+      );
+      record('没碰地图时状态机照常接管走这一屏', handedOff, `实际 ${await cdp.eval('location.pathname')}`);
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ paused: false }) });
+    }
+
     await goto('/arriving', { shot: '14-arriving', settle: 1800, label: '即将到达', expect: ['下车'] });
 
     let arrived = false;
@@ -453,9 +503,35 @@ async function main() {
     // 取件码同样是下车之后才用的，也必须能在会话失效之后拿到
     await goto('/share', { shot: '22-share', settle: 2200, label: '取件码（同步到手机）', expect: ['取件码'] });
     {
-      const lines = await cdp.eval(`document.querySelectorAll('.token__line').length`);
-      const bounced = await cdp.eval(`location.pathname === '/verify'`);
-      record('会话失效后仍能取到取件码', lines >= 2 && !bounced, `${lines} 行取件码`);
+      // 取件码是异步取的：页面先渲染骨架屏，接口回来才有码。
+      // 这里必须轮询等它出现，不能固定等一个秒数就读一次——读早了会报成
+      // "0 行取件码"，看起来像后端出了问题，其实只是断言跑在数据前面
+      // （骨架屏那一屏大约 89 字，和"没拿到码"长得几乎一样，光看字数分不出来）。
+      const begin = Date.now();
+      let info = null;
+      while (Date.now() - begin < 10_000) {
+        info = JSON.parse(
+          await cdp.eval(`JSON.stringify({
+            path: location.pathname,
+            lines: document.querySelectorAll('.token__line').length,
+            skeleton: !!document.querySelector('.sk'),
+            alert: (document.querySelector('.page .alert, [role="alert"]')?.innerText ?? '').trim(),
+            empty: (document.querySelector('.empty__title')?.innerText ?? '').trim(),
+          })`),
+        );
+        // 拿到码、被弹走、或者明确报错/空状态，都不用再等了
+        if (info.lines >= 2 || info.path === '/verify' || info.alert || info.empty) break;
+        await sleep(250);
+      }
+      const waited = Date.now() - begin;
+      const ok = info.lines >= 2 && info.path !== '/verify';
+      record(
+        '会话失效后仍能取到取件码',
+        ok,
+        `${info.lines} 行取件码｜路由 ${info.path}｜等待 ${waited}ms` +
+          `${info.skeleton ? '｜仍停在骨架屏' : ''}` +
+          `${info.alert ? `｜提示「${info.alert}」` : ''}${info.empty ? `｜空状态「${info.empty}」` : ''}`,
+      );
     }
 
     await goto('/farewell', { shot: '18-farewell', settle: 1100, label: '送别页', expect: ['清除'] });

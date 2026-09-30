@@ -21,6 +21,34 @@ export const useUiStore = defineStore('ui', () => {
   const motion = ref<'full' | 'calm'>((localStorage.getItem(LS.motion) as 'full' | 'calm') ?? 'full');
   const voiceEnabled = ref(localStorage.getItem('robotaxi.voice') !== '0');
 
+  /**
+   * 状态机换屏的两个刹车。它们解决的是同一类体感问题：
+   * **屏幕不能在乘客手指底下被换掉。**
+   *
+   * - `touching`：手指还按在屏幕上。行程末段车辆一进入"即将到达"，后端就会推状态、
+   *   前端立刻换屏；如果这一刻乘客正在拖地图，页面就会当场消失，体感是"我一碰它就跳走"。
+   * - `mapManual`：乘客手动拖过地图，说明他明确想自己看位置。此后 /trip 归他控制，
+   *   即使车辆进入"即将到达"也不自动收走，直到他点"回到车辆"。
+   */
+  const touching = ref(false);
+  const mapManual = ref(false);
+  let graceUntil = 0;
+
+  function setTouching(v: boolean): void {
+    touching.value = v;
+    // 抬手之后留一点余量：拖动的最后一帧和紧随其后的 click 属于同一次操作
+    if (!v) graceUntil = Date.now() + 700;
+  }
+
+  /** 此刻是否处在"乘客正在操作"的窗口里 */
+  function isInteracting(): boolean {
+    return touching.value || Date.now() < graceUntil;
+  }
+
+  function setMapManual(v: boolean): void {
+    mapManual.value = v;
+  }
+
   /** auto 模式下按时间判断：白天浅色、夜间深色 */
   const resolvedTheme = computed<'dark' | 'light'>(() => {
     if (theme.value !== 'auto') return theme.value;
@@ -63,6 +91,11 @@ export const useUiStore = defineStore('ui', () => {
     contrast,
     motion,
     voiceEnabled,
+    touching,
+    mapManual,
+    setTouching,
+    isInteracting,
+    setMapManual,
     cycleTheme,
     toggleFont,
     toggleContrast,

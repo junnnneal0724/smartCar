@@ -137,7 +137,20 @@ export class SeedService {
     const dest = candidates[Math.floor(Math.random() * candidates.length)] ?? pois[pois.length - 1];
 
     const user = this.db.get<{ id: number }>('SELECT id FROM t_user ORDER BY id LIMIT 1')!;
-    const verifyCode = String(1000 + Math.floor(Math.random() * 9000));
+
+    /**
+     * 乘车校验码，演示里固定成 1234。
+     *
+     * 车机是公共设备，乘客凭什么证明"这一单是我的"？靠一个只有他知道、
+     * 同车其他人不知道的数字，所以校验页的文案写的是"手机号后 4 位"。
+     * 这里固定住是刻意的：演示时不用再去 /ops 里翻 t_ride 表抄随机码，
+     * 观众也能一次记住。它正好等于播种的默认乘客（林小满 13800001234）
+     * 的手机尾号，所以那句文案依然是真的。
+     * 注意：换了默认乘客（改了 t_user 的种子手机号）就要一起改这里，
+     * 否则界面提示会与实际校验值对不上。
+     */
+    const DEMO_VERIFY_CODE = '1234';
+    const verifyCode = DEMO_VERIFY_CODE;
 
     // 车辆起点：离上车点 ~700 米的另一个节点
     const originNode = this.map.nearestNode({ lng: origin.lng, lat: origin.lat });

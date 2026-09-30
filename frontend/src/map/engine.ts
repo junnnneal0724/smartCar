@@ -24,6 +24,11 @@ export interface VehicleMarker {
 }
 
 export interface MapScene {
+  /**
+   * 相机的初始中心与缩放。注意 center 只在构造时用作起始位置，
+   * 之后引擎不再读它：不跟随时镜头完全交给乘客手势（见 step()），
+   * 跟随时则锁定在本车上。想让镜头主动移动请改 following 或直接改 cam。
+   */
   camera: Camera;
   vehicles: VehicleMarker[];
   /** 剩余路线（高亮） */
@@ -168,10 +173,15 @@ export class MapEngine {
     const s = this.scene;
     if (!s) return;
     const self = s.vehicles.find((v) => v.isSelf);
-    const target = s.following && self ? { lng: self.lng, lat: self.lat } : s.camera.center;
 
-    this.cam.center.lng = smoothTo(this.cam.center.lng, target.lng, dt, 0.18);
-    this.cam.center.lat = smoothTo(this.cam.center.lat, target.lat, dt, 0.18);
+    // 只在跟随时动车心，不跟随时必须完全不碰：镜头归乘客控制。
+    // 这里原来是无条件把中心平滑到 s.camera.center，而调用方传进来的是地图的
+    // 初始中心（一个固定值），于是乘客每拖动一下，下一帧就被平滑拽回城市中心，
+    // 表现就是"地图拖不动、总是弹回去"。
+    if (s.following && self) {
+      this.cam.center.lng = smoothTo(this.cam.center.lng, self.lng, dt, 0.18);
+      this.cam.center.lat = smoothTo(this.cam.center.lat, self.lat, dt, 0.18);
+    }
     this.cam.scale = smoothTo(this.cam.scale, s.camera.scale, dt, 0.35);
   }
 

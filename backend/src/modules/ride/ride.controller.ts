@@ -42,10 +42,12 @@ export class RideController {
   /** 修改目的地 / 加经停（常用地点快捷选择） */
   @Post('destination')
   @UseGuards(SessionGuard)
-  destination(@Req() req: any, @Body() body: { name: string; lng: number; lat: number; category?: string; poiId?: string }) {
-    if (!body?.name) throw new BizError(ErrorCode.BAD_REQUEST, '请选择目的地');
-    let { name, lng, lat, category } = body;
-    if (body.poiId) {
+  destination(@Req() req: any, @Body() body: { name?: string; lng?: number; lat?: number; category?: string; poiId?: string }) {
+    // 必须先解析 poiId，再校验 name。
+    // 原来顺序反了：先要求 name 存在，才去查 POI，而前端"常用地点"只传 poiId，
+    // 于是从界面改目的地必定被拒（报"请选择目的地"），库里什么都没变。
+    let { name, lng, lat, category } = body ?? {};
+    if (body?.poiId) {
       const poi = this.map.poi(body.poiId);
       if (!poi) throw new BizError(ErrorCode.NOT_FOUND, '地点不存在');
       name = poi.name;
@@ -53,6 +55,7 @@ export class RideController {
       lat = poi.lat;
       category = poi.category;
     }
+    if (!name) throw new BizError(ErrorCode.BAD_REQUEST, '请选择目的地');
     if (typeof lng !== 'number' || typeof lat !== 'number') {
       throw new BizError(ErrorCode.BAD_REQUEST, '目的地坐标不合法');
     }

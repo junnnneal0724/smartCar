@@ -366,6 +366,7 @@ export class RideService {
       '目的地已更新',
       `新的目的地：${dest.name}，预计里程 ${(planDistanceM / 1000).toFixed(1)} 公里`,
     );
+    // 状态没变（还是 ONGOING/ARRIVING），但目的地变了，前端要刷新行程卡。
     this.bus.emit(DomainEvent.RIDE_STATUS_CHANGED, {
       rideId: id,
       rideNo: ride.ride_no,
@@ -375,7 +376,65 @@ export class RideService {
       vehicleId: ride.vehicle_id,
       at: Date.now(),
     });
+    // 单独再发一个事件，专门给仿真用：它必须按新终点重新规划路线。
+    // 只改库里的 dest_* 是不够的，仿真只在"模式或行程变了"时才重规划，
+    // 于是车会继续沿旧路线开向旧终点，而屏幕上写的已经是新目的地。
+    this.bus.emit(DomainEvent.RIDE_DEST_CHANGED, {
+      rideId: id,
+      vehicleId: ride.vehicle_id,
+      dest,
+    });
     return this.getRide(id)!;
+  }
+
+  /**
+   * 把停靠点落成新的终点。
+   *
+   * 停靠之后行程就在这个点结束，所以它本质上就是"把终点改成这里"：
+   * 复用 dest_* 与 plan_* 这套字段，到站、开门、小结、结算全都走现成的流程，
+   * 不用为停靠另开一条分支。planDistanceM 由仿真按真实路网算好传进来
+   * （= 已行驶里程 + 当前位置到停靠点的距离），这样进度条和到达判定都是对的。
+   */
+  applyStopPoint(
+    id: number,
+    stopId: number,
+    target: { name: string; lng: number; lat: number },
+    planDistanceM: number,
+  ): RideRow {
+    const ride = this.getRide(id);
+    if (!ride) throw new BizError(ErrorCode.NOT_FOUND, '行程不存在');
+
+    const planDurationS = estimateDurationS(planDistanceM);
+    this.db.run(
+      `UPDATE t_ride SET dest_name = ?, dest_lng = ?, dest_lat = ?, dest_category = 'other',
+        plan_distance_m = ?, plan_duration_s = ? WHERE id = ?`,
+      target.name,
+      target.lng,
+      target.lat,
+      Math.max(1, Math.round(planDistanceM)),
+      planDurationS,
+      id,
+    );
+    this.db.run(
+      `UPDATE t_stop_request SET status = 'ACCEPTED', target_name = ?, target_lng = ?, target_lat = ? WHERE id = ? AND ride_id = ?`,
+      target.name,
+      target.lng,
+      target.lat,
+      stopId,
+      id,
+    );
+    return this.getRide(id)!;
+  }
+
+  /** 停靠请求已处理完（乘客下车 / 行程结束） */
+  resolveStopRequest(rideId: number, stopId: number, status: 'DONE' | 'CANCELLED' = 'DONE'): void {
+    this.db.run(
+      `UPDATE t_stop_request SET status = ?, resolved_at = ? WHERE id = ? AND ride_id = ?`,
+      status,
+      Date.now(),
+      stopId,
+      rideId,
+    );
   }
 
   /** 停靠请求：普通（前方下车）或紧急停车 */
@@ -415,7 +474,16 @@ export class RideService {
   }
 
   cancelStop(id: number, stopId: number) {
-    this.db.run(`UPDATE t_stop_request SET status = 'CANCELLED', resolved_at = ? WHERE id = ? AND ride_id = ?`, Date.now(), stopId, id);
+    // 只允许撤还没落地的请求。已经 DONE 的那条再撤销会改写历史。
+    this.db.run(
+      `UPDATE t_stop_request SET status = 'CANCELLED', resolved_at = ? WHERE id = ? AND ride_id = ? AND status IN ('PENDING','ACCEPTED')`,
+      Date.now(),
+      stopId,
+      id,
+    );
+    // 通知仿真：如果撤的正是当前生效的那条，必须把终点和路线改回去，
+    // 否则界面说"已取消"、车却还在往停靠点开。
+    this.bus.emit(DomainEvent.RIDE_STOP_CANCELLED, { id: stopId, rideId: id });
     return { ok: true };
   }
 

@@ -327,6 +327,58 @@ async function main() {
 
     console.log('\n── 行程中（功能条必须真的能跳转） ────────────────');
     await goto('/trip', { shot: '07-trip', settle: 3600, label: '行程主屏（自绘地图）', expect: ['目的地', '预计还需'], minCanvas: 1 });
+
+    // 地图必须能手动拖动，而且松手之后不能被拽回中心。
+    // 相机是否被拉回没法从 DOM 上看出来，所以用画布像素签名来判断：
+    // 拖动前后、以及静置一段时间之后，画面都应该显著不同于拖动之前。
+    // 必须先暂停仿真，否则车一动画面本来就变，测不出相机有没有回弹。
+    {
+      const SIG = `(() => {
+        const c = document.querySelector('.map__canvas');
+        if (!c) return null;
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        const out = [];
+        // 采样步长取质数，避免和地图上规则的网格对齐
+        for (let i = 0; i < d.length; i += 997 * 4) out.push(d[i], d[i + 1], d[i + 2]);
+        return out;
+      })()`;
+      const DRAG = `(() => {
+        const c = document.querySelector('.map__canvas');
+        if (!c) return;
+        const r = c.getBoundingClientRect();
+        const x = r.left + r.width / 2;
+        const y = r.top + r.height / 2;
+        const ev = (t, cx, cy) =>
+          c.dispatchEvent(new PointerEvent(t, { clientX: cx, clientY: cy, pointerId: 1, bubbles: true, pointerType: 'mouse' }));
+        ev('pointerdown', x, y);
+        for (let i = 1; i <= 8; i++) ev('pointermove', x - i * 40, y - i * 6);
+        ev('pointerup', x - 320, y - 48);
+      })()`;
+      const ratio = (a, b) => {
+        if (!a || !b || a.length !== b.length) return -1;
+        let n = 0;
+        for (let i = 0; i < a.length; i += 3) {
+          if (Math.abs(a[i] - b[i]) > 16 || Math.abs(a[i + 1] - b[i + 1]) > 16 || Math.abs(a[i + 2] - b[i + 2]) > 16) n++;
+        }
+        return n / (a.length / 3);
+      };
+
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ paused: true }) });
+      await sleep(700);
+      const before = await cdp.eval(SIG);
+      await cdp.eval(DRAG);
+      await sleep(350);
+      const dragged = await cdp.eval(SIG);
+      await sleep(2600);
+      const settled = await cdp.eval(SIG);
+      const moved = ratio(before, dragged);
+      const kept = ratio(before, settled);
+      record('地图可手动拖动', moved > 0.12, `拖动后画面变化 ${(moved * 100).toFixed(0)}%`);
+      record('地图松手后不弹回中心', kept > 0.12, `静置 2.6 秒后仍与拖动前不同 ${(kept * 100).toFixed(0)}%`);
+      await cdp.screenshot(path.join(OUT, '07b-trip-panned.png'));
+      await api('/ops/sim', { method: 'POST', body: JSON.stringify({ paused: false }) });
+    }
+
     await goto('/cabin', { shot: '08-cabin', settle: 1500, label: '座舱环境控制', expect: ['舒缓'] });
     await goto('/stop', { shot: '09-stop', settle: 1300, label: '分级停靠', expect: ['紧急停车'] });
     await goto('/destination', { shot: '10-destination', settle: 1300, label: '改目的地', expect: ['目的地'] });

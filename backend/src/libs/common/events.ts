@@ -10,6 +10,8 @@ export const DomainEvent = {
   RIDE_PROGRESS: 'ride.progress',
   RIDE_BEHAVIOR: 'ride.behavior',
   RIDE_STOP_REQUESTED: 'ride.stop_requested',
+  RIDE_STOP_CANCELLED: 'ride.stop_cancelled',
+  RIDE_DEST_CHANGED: 'ride.dest_changed',
   VEHICLE_POSITION: 'vehicle.position',
   VEHICLE_TELEMETRY: 'vehicle.telemetry',
   CABIN_CHANGED: 'cabin.changed',
@@ -59,6 +61,23 @@ export interface RideBehaviorPayload {
   icon: string;
   slowsDown: boolean;
   endsAt: number;
+}
+
+export interface RideStopRequestedPayload {
+  id: number;
+  rideId: number;
+  kind: 'NORMAL' | 'EMERGENCY';
+  target?: { name: string; lng: number; lat: number };
+}
+
+/**
+ * 目的地被改掉了。仿真必须在下一帧按新终点重新规划路线，
+ * 否则车会继续沿旧路线开向旧终点，而界面上显示的已经是新目的地。
+ */
+export interface RideDestChangedPayload {
+  rideId: number;
+  vehicleId: string;
+  dest: { name: string; lng: number; lat: number };
 }
 
 export interface VehicleTelemetryPayload {

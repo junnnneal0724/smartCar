@@ -120,7 +120,13 @@ function onPointerDown(e: PointerEvent): void {
   dragging = true;
   lastX = e.clientX;
   lastY = e.clientY;
-  (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  // 失败要吞掉：pointerId 过期、或用脚本合成的事件都会让这里抛异常，
+  // 而拖动本身已经在上面记好状态了，不该因为捕获指针失败而中断。
+  try {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  } catch {
+    /* 捕获不到就算了，拖动照样能用 */
+  }
 }
 
 function onPointerMove(e: PointerEvent): void {

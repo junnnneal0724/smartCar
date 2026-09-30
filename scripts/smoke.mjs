@@ -142,23 +142,52 @@ const p1 = (await api('/api/ride/current')).ride.traveledM;
 check('已行驶里程在增长', p1 > p0, `${p0}m → ${p1}m`);
 check('剩余时间已估算', (await api('/api/ride/current')).ride.remainTimeS > 0);
 
-// ---------------------------------------------------------------- 8. 停靠请求
-console.log('\n[8] 分级停靠');
-const stop = await api('/api/ride/stop', { method: 'POST', body: { kind: 'NORMAL', name: '前方路口', lng: 116.4, lat: 39.91 } });
-check('普通停靠请求已受理', stop.status === 'PENDING');
+// ---------------------------------------------------------------- 8. 改目的地与停靠
+console.log('\n[8] 改目的地 / 分级停靠');
+// 这一节的每条断言都对应曾经真实存在的缺陷，别删：
+//  - 只传 poiId 改目的地：控制器原先先校验 name 再查 POI，前端只传 poiId，于是必定被拒
+//  - 停靠要真的改变车辆行为：接口原先只落库 + 广播，仿真从不订阅事件，车照旧开往原目的地
+//  - 取消要真的回滚：否则界面写"已取消"、车还在往停靠点开
+const pois = (await api('/api/ops/table/t_poi?limit=200')).rows;
+let cur = (await api('/api/ride/current')).ride;
+
+const destPoi = pois.find((p) => p.name !== cur.origin.name && p.name !== cur.dest.name);
+const destBefore = cur.dest.name;
+await api('/api/ride/destination', { method: 'POST', body: { poiId: destPoi.id } });
+let afterDest = (await api('/api/ride/current')).ride;
+check('只传 poiId 也能改目的地', afterDest.dest.name === destPoi.name, `${destBefore} → ${afterDest.dest.name}`);
+check('改目的地后规划里程已重算', afterDest.planDistanceM > 0, `${afterDest.planDistanceM} m`);
+
+const stopPoi = pois.find((p) => ![cur.origin.name, afterDest.dest.name].includes(p.name));
+const stop = await api('/api/ride/stop', { method: 'POST', body: { kind: 'NORMAL', poiId: stopPoi.id } });
+check('普通停靠请求已受理', !!stop.id, stopPoi.name);
+const afterStop = (await api('/api/ride/current')).ride;
+check('受理停靠后终点改为停靠点', afterStop.dest.name === stopPoi.name, `→ ${afterStop.dest.name}`);
+check('受理停靠后行程转入 ARRIVING', afterStop.status === 'ARRIVING', afterStop.status);
+check('停靠请求状态转为 ACCEPTED', (await api('/api/ride/stops')).some((s) => s.id === stop.id && s.status === 'ACCEPTED'));
+
 await api(`/api/ride/stop/${stop.id}/cancel`, { method: 'POST' });
-check('停靠请求可取消', true);
+const reverted = (await api('/api/ride/current')).ride;
+check('取消停靠后终点回滚', reverted.dest.name === afterDest.dest.name, `→ ${reverted.dest.name}`);
+check('取消停靠后状态回到 ONGOING', reverted.status === 'ONGOING', reverted.status);
+check('停靠请求状态转为 CANCELLED', (await api('/api/ride/stops')).some((s) => s.id === stop.id && s.status === 'CANCELLED'));
+
 const sos = await api('/api/ride/stop', { method: 'POST', body: { kind: 'EMERGENCY', note: '乘客不适' } });
 check('紧急停车已受理并联动安全事件', sos.kind === 'EMERGENCY');
+check('紧急停车联动写入 SOS 记录', (await api('/api/ops/table/t_sos_record?limit=5')).rows.length > 0);
 
-// ---------------------------------------------------------------- 9. 即将到达
+// ---------------------------------------------------------------- 9. 到达流程
 console.log('\n[9] 到达流程');
-await api('/api/ops/ride/jump-arriving', { method: 'POST' });
-await waitFor(async () => {
+// 上一步的紧急停车已经把终点改成"前方安全位置"，车会自己开过去停稳。
+// 这里不再用 jump-arriving：它是运营侧的演示捷径，此时行程已不在 ONGOING。
+await api('/api/ops/sim', { method: 'POST', body: { multiplier: 16, paused: false } });
+const arrived = await waitFor(async () => {
   const b = await api('/api/session/bootstrap');
   return b.ride?.status === 'ARRIVED' ? b : null;
-}, { label: '车辆停稳' });
-check('行程进入 ARRIVED（已停稳）', true);
+}, { label: '车辆靠边停稳' });
+check('紧急停靠后车辆自行停稳', true, arrived.ride.statusLabel);
+check('停靠请求已完结（DONE）', (await api('/api/ride/stops')).some((s) => s.kind === 'EMERGENCY' && s.status === 'DONE'));
+await api('/api/ops/sim', { method: 'POST', body: { multiplier: 4, paused: false } });
 const door = await api('/api/ride/open-door', { method: 'POST' });
 check('停稳后可以开门', door.ok === true);
 

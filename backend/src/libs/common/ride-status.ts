@@ -28,7 +28,9 @@ const TRANSITIONS: Record<RideStatusValue, RideStatusValue[]> = {
   ABOARD: ['READY', 'CANCELLED'],
   READY: ['ONGOING', 'CANCELLED'],
   ONGOING: ['ARRIVING', 'CANCELLED'],
-  ARRIVING: ['ARRIVED', 'CANCELLED'],
+  // ARRIVING 可以退回 ONGOING：乘客撤销了停靠请求，或者改了目的地之后
+  // 行程其实还没到终点，"即将到达"就不再成立了，得回到"行程中"。
+  ARRIVING: ['ONGOING', 'ARRIVED', 'CANCELLED'],
   ARRIVED: ['COMPLETED'],
   COMPLETED: [],
   CANCELLED: [],

@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { MapService, type PathLeg } from '../../libs/map/map.service';
-import { DomainEvent, DomainEvents } from '../../libs/common/events';
+import { DomainEvent, DomainEvents, type RideDestChangedPayload, type RideStopRequestedPayload } from '../../libs/common/events';
 import { RideStatus } from '../../libs/common/ride-status';
 import { pickBehavior, BEHAVIORS, type BehaviorDef } from '../../libs/common/behaviors';
 import { FleetService } from '../fleet/fleet.service';
@@ -29,6 +29,13 @@ interface VehicleRuntime {
   traveledM: number;
   lastProgressEmitSimMs: number;
   lastRoutePointSimMs: number;
+  /** 终点变了（改目的地、或接受了停靠请求），下一帧必须重新规划路线 */
+  needsReplan: boolean;
+  /** 已受理的停靠点。到了这里就算到站，行程在此结束，而不是在原目的地 */
+  stopTarget: { name: string; lng: number; lat: number } | null;
+  stopId: number | null;
+  /** 受理停靠之前的原终点。撤销停靠时要靠它把路改回去 */
+  preStopDest: { name: string; lng: number; lat: number } | null;
 }
 
 /**
@@ -62,6 +69,17 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     this.lastTickAt = Date.now();
     this.timer = setInterval(() => this.tick(), TICK_MS);
+
+    // 之前这里一个事件都不订阅，只往外发。结果是：停靠请求写进了库、
+    // 记了事件、也推给了前端，但车照旧开往原终点，乘客看到的是"点了没反应"；
+    // 改目的地同理，仿真的重规划条件只看自己的模式，感知不到终点已经变了。
+    this.events.on<RideStopRequestedPayload>(DomainEvent.RIDE_STOP_REQUESTED, (p) => this.onStopRequested(p));
+    this.events.on<{ id: number; rideId: number }>(DomainEvent.RIDE_STOP_CANCELLED, (p) => this.onStopCancelled(p));
+    this.events.on<RideDestChangedPayload>(DomainEvent.RIDE_DEST_CHANGED, (p) => {
+      const rt = this.runtimes.get(p.vehicleId);
+      if (rt && rt.rideId === p.rideId) rt.needsReplan = true;
+    });
+
     this.logger.log(`仿真时钟已启动（${TICK_MS}ms/步，默认倍速 ${this.multiplier}x）`);
   }
 
@@ -147,9 +165,104 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  // ------------------------------------------------------------ 停靠受理
+
+  /**
+   * 受理停靠请求：真的把车改道到停靠点，并在那里结束行程。
+   *
+   * 这个方法以前不存在——请求只落库并广播，仿真从不订阅，于是车照旧开往原目的地，
+   * 乘客点了「前方下车」屏幕上什么都不会变。停靠本质上就是"把终点改成这里"，
+   * 所以走 applyStopPoint 复用 dest_* 与 plan_*，到站、开门、小结、结算全都不用另写。
+   */
+  private onStopRequested(p: RideStopRequestedPayload): void {
+    const ride = this.ride.getRide(p.rideId);
+    if (!ride) return;
+    if (ride.status !== RideStatus.ONGOING && ride.status !== RideStatus.ARRIVING) return;
+
+    const v = this.fleet.getVehicle(ride.vehicle_id);
+    if (!v) return;
+    const rt = this.ensureRuntime(ride.vehicle_id);
+
+    // 紧急停车没有指定地点，就近靠边
+    const target = p.target ?? this.pullOverPoint(rt, v.lng, v.lat);
+    const path = this.planFrom(v.lng, v.lat, target.lng, target.lat);
+
+    // 记下原终点，供撤销时回滚。已经被上一个停靠点改写过的话就不要再覆盖，
+    // 否则撤销第二个停靠会"回到"第一个停靠点，而不是真正的目的地。
+    if (!rt.stopTarget) {
+      rt.preStopDest = { name: ride.dest_name, lng: ride.dest_lng, lat: ride.dest_lat };
+    }
+
+    rt.mode = 'TRIP';
+    rt.rideId = ride.id;
+    rt.path = path;
+    rt.legIndex = 0;
+    rt.legProgressM = 0;
+    rt.needsReplan = false;
+    rt.stopTarget = target;
+    rt.stopId = p.id;
+
+    const legM = path.reduce((s, l) => s + l.lengthM, 0);
+    this.ride.applyStopPoint(ride.id, p.id, target, rt.traveledM + legM);
+    this.ride.setStatus(
+      ride.id,
+      RideStatus.ARRIVING,
+      p.kind === 'EMERGENCY' ? '正在靠边停车' : `即将在${target.name}停靠`,
+    );
+    this.ride.recordEvent(
+      ride.id,
+      p.kind === 'EMERGENCY' ? 'SAFETY' : 'SYSTEM',
+      'STOP_ACCEPTED',
+      p.kind === 'EMERGENCY' ? '车辆正在靠边停车' : '停靠请求已受理',
+      `将在「${target.name}」停车，本段还有约 ${Math.round(legM)} 米`,
+    );
+  }
+
+  /**
+   * 紧急停车时的"最近的安全位置"。
+   *
+   * 取当前正在走的这条路走完的那个路口：落点一定在路网上，车不用掉头，
+   * 也不会突然横在路中间。真实产品要综合路沿、禁停区、车道来算，
+   * 演示里用"这一段走完就停"已经把语义表达清楚了。
+   */
+  private pullOverPoint(rt: VehicleRuntime, lng: number, lat: number): { name: string; lng: number; lat: number } {
+    const leg = rt.path[rt.legIndex];
+    const node = leg ? this.map.node(leg.to) : null;
+    if (node) return { name: '前方安全位置', lng: node.lng, lat: node.lat };
+    const near = this.map.nearestNode({ lng, lat });
+    return { name: '当前位置', lng: near.lng, lat: near.lat };
+  }
+
+  /**
+   * 撤销停靠：把终点和路线改回原样，继续原本的行程。
+   *
+   * 停靠是"立即受理"的（受理后车立刻开始往停靠点开），所以取消必须真的回滚，
+   * 否则界面上写着"已取消"，车却还在往那个点开——比不提供取消更糟。
+   */
+  private onStopCancelled(p: { id: number; rideId: number }): void {
+    const ride = this.ride.getRide(p.rideId);
+    if (!ride) return;
+    const rt = this.runtimes.get(ride.vehicle_id);
+    // 撤的不是当前生效的那条，无需处理
+    if (!rt || rt.stopId !== p.id) return;
+
+    const back = rt.preStopDest;
+    rt.stopTarget = null;
+    rt.stopId = null;
+    rt.preStopDest = null;
+    if (!back) return;
+
+    // 改回原终点。这一步会再发一次 RIDE_DEST_CHANGED，把 needsReplan 置上，
+    // 下一帧就按原终点重新规划路线。
+    this.ride.changeDestination(ride.id, { name: back.name, lng: back.lng, lat: back.lat });
+    if (ride.status === RideStatus.ARRIVING) {
+      this.ride.setStatus(ride.id, RideStatus.ONGOING, `停靠已取消，继续前往${back.name}`);
+    }
+    this.ride.recordEvent(ride.id, 'SYSTEM', 'STOP_CANCELLED', '停靠已取消', `继续前往「${back.name}」`);
+  }
+
   /** 手动注入一个车辆行为，用于演示决策可视化 */
-  injectBehavior(type?: string): { ok: boolean; type?: string } {
-    const ride = this.ride.getCurrentRide();
+  injectBehavior(type?: string): { ok: boolean; type?: string } {    const ride = this.ride.getCurrentRide();
     if (!ride) return { ok: false };
     const rt = this.runtimes.get(ride.vehicle_id);
     if (!rt) return { ok: false };
@@ -218,6 +331,10 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
         traveledM: 0,
         lastProgressEmitSimMs: 0,
         lastRoutePointSimMs: 0,
+        needsReplan: false,
+        stopTarget: null,
+        stopId: null,
+        preStopDest: null,
       };
       this.runtimes.set(vehicleId, rt);
     }
@@ -264,15 +381,31 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
 
     // 3) 行程中 / 即将到达：沿行程路线行驶
     if (ride.status === RideStatus.ONGOING || ride.status === RideStatus.ARRIVING) {
-      if (rt.mode !== 'TRIP' || rt.rideId !== ride.id || rt.path.length === 0) {
+      if (rt.mode !== 'TRIP' || rt.rideId !== ride.id || rt.path.length === 0 || rt.needsReplan) {
+        const fresh = rt.mode !== 'TRIP' || rt.rideId !== ride.id || rt.path.length === 0;
         rt.mode = 'TRIP';
         rt.rideId = ride.id;
-        // 从车辆当前位置到目的地的路径（改目的地后会重新规划）
+        rt.needsReplan = false;
+        // 从车辆当前位置到目的地的路径。终点在改目的地之后已经变了，
+        // 所以这里必须按当前的 dest_* 重算，而不是沿用旧路径。
         rt.path = this.planFrom(v.lng, v.lat, ride.dest_lng, ride.dest_lat);
         rt.legIndex = 0;
         rt.legProgressM = 0;
-        rt.traveledM = ride.traveled_m;
-        this.ride.recordEvent(ride.id, 'SYSTEM', 'ROUTE_PLANNED', '路线已规划', `全程约 ${(rt.path.reduce((s, l) => s + l.lengthM, 0) / 1000).toFixed(1)} 公里`);
+        if (fresh) {
+          rt.traveledM = ride.traveled_m;
+          // 上一趟的停靠点绝不能留到这一趟，否则新车会往老地方开
+          rt.stopTarget = null;
+          rt.stopId = null;
+          rt.preStopDest = null;
+        }
+        const total = rt.path.reduce((s, l) => s + l.lengthM, 0);
+        this.ride.recordEvent(
+          ride.id,
+          'SYSTEM',
+          'ROUTE_PLANNED',
+          fresh ? '路线已规划' : '已按新终点重新规划路线',
+          `前往「${ride.dest_name}」，本段约 ${(total / 1000).toFixed(1)} 公里`,
+        );
       }
 
       const done = this.step(rt, vehicleId, dtSimS, `前往 ${ride.dest_name}`);
@@ -299,7 +432,13 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
         });
       }
       if (done) {
-        this.ride.setStatus(ride.id, RideStatus.ARRIVED, '车辆已停稳在目的地');
+        // 停靠受理过的话，行程是在停靠点结束的，不是原目的地
+        const stopped = rt.stopTarget;
+        this.ride.setStatus(
+          ride.id,
+          RideStatus.ARRIVED,
+          stopped ? `车辆已停靠在${stopped.name}` : '车辆已停稳在目的地',
+        );
         rt.mode = 'PARKED';
         // 必须在"到达的这一刻"就把车速归零并广播出去。
         // 否则会有一个"状态已 ARRIVED、车速还停在巡航值"的窗口，
@@ -308,11 +447,24 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
         rt.speedKph = 0;
         this.fleet.updatePosition(vehicleId, { lng: v.lng, lat: v.lat, heading: v.heading, speedKph: 0, roadName: v.road_name });
         this.emitPosition(vehicleId, v.lng, v.lat, v.heading, 0, ride.id);
-        this.events.emit(DomainEvent.NOTICE, {
+        if (stopped && rt.stopId != null) {
+          this.ride.resolveStopRequest(ride.id, rt.stopId, 'DONE');
+          this.ride.recordEvent(
+            ride.id,
+            'SYSTEM',
+            'STOP_DONE',
+            '已靠边停车',
+            `车辆已在「${stopped.name}」停稳，请确认后方来车后再开门`,
+          );
+        }
+        // 停靠已经落地，清掉运行时的停靠状态，避免事后撤销把一辆已停稳的车再"开回去"
+        rt.stopTarget = null;
+        rt.stopId = null;
+        rt.preStopDest = null;        this.events.emit(DomainEvent.NOTICE, {
           rideId: ride.id,
           kind: 'success',
-          title: '已到达目的地',
-          detail: '车辆已停稳，请确认随身物品后开门下车',
+          title: stopped ? '已靠边停车' : '已到达目的地',
+          detail: stopped ? '车辆已停稳，请确认后方来车后再开门' : '车辆已停稳，请确认随身物品后开门下车',
         });
       }
       return;

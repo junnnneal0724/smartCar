@@ -422,6 +422,42 @@ async function main() {
     await goto('/summary', { shot: '20b-summary-dark-restored', settle: 1800, label: '恢复深色后的小结', expect: ['合计'], minCanvas: 2 });
 
     await goto('/rate', { shot: '17-rate', settle: 1100, label: '行程评价', expect: ['提交'] });
+
+    // 真的把评价提交掉。这一屏以前是"点进去就被弹回校验页"：提交要求有效会话，
+    // 而会话在行程结束时已经按隐私要求失效，于是评价永远提交不了。
+    {
+      // 星级和提交必须分两次点：按钮在 score===0 时是 disabled 的，
+      // 同一次同步执行里点完星级，DOM 还没更新，提交按钮点不动。
+      const picked = await cdp.eval(`(() => {
+        const stars = document.querySelectorAll('.stars__btn');
+        if (!stars.length) return false;
+        stars[stars.length - 1].click();
+        return true;
+      })()`);
+      await sleep(400);
+      const submitted = await cdp.eval(`(() => {
+        const b = document.querySelector('.rate__submit');
+        if (!b) return false;
+        b.click();
+        return true;
+      })()`);
+      const left = await cdp.waitFor(`location.pathname === '/farewell'`, 9000);
+      record(
+        '评价能提交并进入送别页（没被弹回校验页）',
+        picked && submitted && left,
+        picked && submitted && left ? '' : `选星=${picked} 提交=${submitted} 当前=${await cdp.eval('location.pathname')}`,
+      );
+      await cdp.screenshot(path.join(OUT, '17b-rate-submitted.png'));
+    }
+
+    // 取件码同样是下车之后才用的，也必须能在会话失效之后拿到
+    await goto('/share', { shot: '22-share', settle: 2200, label: '取件码（同步到手机）', expect: ['取件码'] });
+    {
+      const lines = await cdp.eval(`document.querySelectorAll('.token__line').length`);
+      const bounced = await cdp.eval(`location.pathname === '/verify'`);
+      record('会话失效后仍能取到取件码', lines >= 2 && !bounced, `${lines} 行取件码`);
+    }
+
     await goto('/farewell', { shot: '18-farewell', settle: 1100, label: '送别页', expect: ['清除'] });
     await goto('/idle', { shot: '19-idle', settle: 1400, label: '待机屏（行程结束后不该被弹走）', expectRoute: '/idle' });
 

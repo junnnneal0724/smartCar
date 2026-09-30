@@ -142,6 +142,14 @@ const p1 = (await api('/api/ride/current')).ride.traveledM;
 check('已行驶里程在增长', p1 > p0, `${p0}m → ${p1}m`);
 check('剩余时间已估算', (await api('/api/ride/current')).ride.remainTimeS > 0);
 
+// 行程还没结束就不该能评价，否则"结束之后才能评价"这条约束形同虚设
+try {
+  await api('/api/ride/rate', { method: 'POST', body: { score: 5 } });
+  check('行程进行中不能评价', false);
+} catch (e) {
+  check('行程进行中不能评价', String(e.message).includes('行程结束之后才能评价'), e.message);
+}
+
 // ---------------------------------------------------------------- 8. 改目的地与停靠
 console.log('\n[8] 改目的地 / 分级停靠');
 // 这一节的每条断言都对应曾经真实存在的缺陷，别删：
@@ -218,11 +226,7 @@ const assist2 = await api('/api/help/assist');
 check('客服按规则给出回复', assist2.messages.length >= 3, `共 ${assist2.messages.length} 条消息`);
 
 // ---------------------------------------------------------------- 12. 评价与结束
-console.log('\n[12] 评价与结束会话');
-await api('/api/ride/rate', { method: 'POST', body: { score: 5, tags: ['车内整洁', '驾驶平稳'] } });
-check('评分已记录', (await api('/api/ride/summary')).rating?.score === 5);
-const sync = await api('/api/help/sync', { method: 'POST' });
-check('行程可同步到手机', !!sync.token, sync.url);
+console.log('\n[12] 评价、取件码与结束会话');
 await api('/api/ride/complete', { method: 'POST' });
 check('行程已结束，屏幕转入小结', (await api('/api/session/bootstrap')).state === 'SUMMARY');
 try {
@@ -231,6 +235,16 @@ try {
 } catch (e) {
   check('行程结束后会话失效（隐私要求）', String(e.message).includes('40100'));
 }
+
+// 下面两件事都发生在行程结束、会话按隐私要求失效之后——这正是乘客的真实时序。
+// 之前测试把它们放在 complete() 之前，所以"评分和取件码在真实时序下根本打不开"
+// 这个问题一直没被发现：接口要求有效会话，而会话偏偏在这时候刚失效。
+const rate = await api('/api/ride/rate', { method: 'POST', body: { score: 5, tags: ['车内整洁', '驾驶平稳'] } });
+check('会话失效后仍能评价', rate.ok === true);
+check('评分已记录', (await api('/api/ride/summary')).rating?.score === 5);
+const sync = await api('/api/help/sync', { method: 'POST' });
+check('会话失效后仍能取到取件码', !!sync.token, sync.url);
+check('取件码可查看行程', /^\/m\/ride\/.+/.test(sync.url), sync.url);
 check('结束后仍可查看小结', (await api('/api/ride/summary')).fare.total > 0);
 
 // ---------------------------------------------------------------- 结果

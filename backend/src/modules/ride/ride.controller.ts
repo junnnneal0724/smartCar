@@ -3,6 +3,7 @@ import { RideService } from './ride.service';
 import { MapService } from '../../libs/map/map.service';
 import { SessionGuard } from './session.guard';
 import { BizError, ErrorCode } from '../../libs/common/result';
+import { RideStatus } from '../../libs/common/ride-status';
 
 @Controller('api/ride')
 export class RideController {
@@ -124,11 +125,21 @@ export class RideController {
     return this.ride.explain(target.id);
   }
 
-  /** 评价：只做星级 + 标签（车机无键盘） */
+  /**
+   * 评价：只做星级 + 标签（车机无键盘）。
+   *
+   * 这里刻意不加会话守卫。评价天然发生在行程结束之后，而行程一结束会话就按隐私
+   * 要求失效了——加守卫的结果是"要求结束了才能评，结束了又说没有进行中行程"，
+   * 这屏等于永远打不开。兜底逻辑与 summary / explain 保持一致。
+   */
   @Post('rate')
-  @UseGuards(SessionGuard)
-  rate(@Req() req: any, @Body() body: { score: number; tags?: string[] }) {
+  rate(@Body() body: { score: number; tags?: string[] }) {
     if (!body?.score) throw new BizError(ErrorCode.BAD_REQUEST, '请选择评分');
-    return this.ride.rate(req.rideId, Number(body.score), body.tags ?? []);
+    const target = this.ride.getCurrentRide() ?? this.ride.lastCompleted();
+    if (!target) throw new BizError(ErrorCode.NOT_FOUND, '没有可评价的行程');
+    if (target.status !== RideStatus.ARRIVED && target.status !== RideStatus.COMPLETED) {
+      throw new BizError(ErrorCode.RIDE_STATE_INVALID, '行程结束之后才能评价');
+    }
+    return this.ride.rate(target.id, Number(body.score), body.tags ?? []);
   }
 }

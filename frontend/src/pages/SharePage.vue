@@ -16,13 +16,11 @@ import EmptyState from '@/components/EmptyState.vue';
 import IconBase from '@/components/IconBase.vue';
 import SkeletonBlock from '@/components/SkeletonBlock.vue';
 import { helpApi } from '@/api';
-import { useSessionStore } from '@/stores/session';
 import { formatTime } from '@/map/geo';
 
 type ShareLink = Awaited<ReturnType<typeof helpApi.sync>>;
 
 const router = useRouter();
-const session = useSessionStore();
 
 const link = ref<ShareLink | null>(null);
 const loading = ref(true);
@@ -37,11 +35,9 @@ async function fetchLink(): Promise<void> {
   try {
     link.value = await helpApi.sync();
   } catch (e) {
-    if (session.handleAuthError(e)) {
-      router.replace('/verify');
-      return;
-    }
-    error.value = e instanceof Error ? e.message : '取件码没拿到，请再试一次';
+    // 取件码本来就是下车之后才用的，而那时会话已经按隐私要求失效。
+    // 所以这里不能把 401 理解成"去重新校验"，否则这一屏永远打不开。
+    error.value = e instanceof Error && e.message ? e.message : '取件码没拿到，请再试一次';
   } finally {
     loading.value = false;
   }

@@ -45,9 +45,13 @@ export class HelpController {
     return this.help.endAssist(Number(id));
   }
 
-  /** 把行程同步到手机带走 */
+  /**
+   * 把行程同步到手机带走。
+   *
+   * 同样不加会话守卫：取件码是给下车之后用的，而行程结束会话就失效了，
+   * 加守卫会让这屏永远拿不到码。syncToPhone 内部已经兜底到"最近一趟已结束的行程"。
+   */
   @Post('sync')
-  @UseGuards(SessionGuard)
   sync() {
     return this.help.syncToPhone();
   }

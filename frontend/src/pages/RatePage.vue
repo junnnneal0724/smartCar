@@ -11,7 +11,6 @@ import { useRouter } from 'vue-router';
 import AppButton from '@/components/AppButton.vue';
 import IconBase from '@/components/IconBase.vue';
 import { useRideStore } from '@/stores/ride';
-import { useSessionStore } from '@/stores/session';
 
 const TAGS = ['车内整洁', '驾驶平稳', '空调舒适', '行驶安静', '准时到达', '交互顺手'];
 
@@ -25,7 +24,6 @@ const SCORE_COMMENTS: Record<number, string> = {
 
 const router = useRouter();
 const ride = useRideStore();
-const session = useSessionStore();
 
 const score = ref(0);
 const selectedTags = ref<string[]>([]);
@@ -61,10 +59,8 @@ async function submit(): Promise<void> {
     await ride.rate(score.value, [...selectedTags.value]);
     router.push('/farewell');
   } catch (e) {
-    if (session.handleAuthError(e)) {
-      router.replace('/verify');
-      return;
-    }
+    // 这里不再把 401 当成"会话失效，去重新校验"。评价本来就发生在行程结束之后，
+    // 而此时会话已经按隐私要求失效了，把人送去校验页只会卡在一屏无事可验的页面上。
     error.value = e instanceof Error && e.message ? e.message : '评价没提交成功，请再试一次';
   } finally {
     submitting.value = false;

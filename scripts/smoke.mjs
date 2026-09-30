@@ -247,6 +247,38 @@ check('会话失效后仍能取到取件码', !!sync.token, sync.url);
 check('取件码可查看行程', /^\/m\/ride\/.+/.test(sync.url), sync.url);
 check('结束后仍可查看小结', (await api('/api/ride/summary')).fare.total > 0);
 
+// ---------------------------------------------------------------- 13. 实时推送
+console.log('\n[13] 实时推送（SSE）连接回收');
+// 这条守的是一个真实事故：网关转发 SSE 时只 pipe、不销毁上游，客户端断开之后
+// 业务进程仍然以为有人在订阅，之后每个事件都被推进一个没人读的缓冲区，
+// 几小时之后堆溢出，整个后端直接崩掉（而且崩完网关还在监听，页面全是 502）。
+{
+  const before = (await api('/api/realtime/stats')).subscribers;
+  const ac = new AbortController();
+  const res = await fetch(`${BASE}/api/realtime/subscribe`, {
+    signal: ac.signal,
+    headers: { accept: 'text/event-stream' },
+  });
+  const reader = res.body.getReader();
+  const first = await reader.read();
+  await sleep(500);
+  const during = (await api('/api/realtime/stats')).subscribers;
+
+  check('SSE 能连上并推出事件', !!first.value && during > before, `订阅数 ${before} → ${during}`);
+
+  ac.abort();
+  await reader.cancel().catch(() => {});
+  let after = during;
+  for (let i = 0; i < 24; i++) {
+    await sleep(400);
+    after = (await api('/api/realtime/stats')).subscribers;
+    if (after === before) break;
+  }
+  check('SSE 断开后连接被回收（否则会内存泄漏）', after === before, `断开后订阅数 ${after}`);
+  const mem = await api('/api/realtime/stats');
+  check('实时推送带内存自检信息', typeof mem.rssMb === 'number' && mem.rssMb > 0, `常驻 ${mem.rssMb}MB / 堆 ${mem.heapUsedMb}MB`);
+}
+
 // ---------------------------------------------------------------- 结果
 console.log(`\n\x1b[1m结果：${passed} 通过 / ${failed} 失败\x1b[0m\n`);
 process.exit(failed ? 1 : 0);

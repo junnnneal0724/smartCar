@@ -27,16 +27,32 @@ const tasks = [
   },
 ];
 
-const children = tasks.map((t) => {
+/**
+ * 子进程崩了要自动拉起来，理由同 backend/scripts/start-all.mjs：
+ * 只打印一行"进程退出"的话，前端还活着、后端已经死了，页面上全是报错，
+ * 但从外面看"服务是开着的"，最难判断。
+ */
+const RESTART_DELAY_MS = 1500;
+
+let shuttingDown = false;
+const children = [];
+
+function launch(t) {
   const child = spawn(t.cmd, t.args, { cwd: t.cwd, stdio: 'inherit', env: { ...process.env } });
+  children.push(child);
   child.on('exit', (code, signal) => {
-    if (signal) return;
-    console.log(`${t.color}[${t.name}]\x1b[0m 进程退出 code=${code}`);
+    if (signal || shuttingDown) return;
+    console.log(`${t.color}[${t.name}]\x1b[0m 进程退出 code=${code}，${RESTART_DELAY_MS}ms 后自动重启`);
+    setTimeout(() => {
+      if (!shuttingDown) launch(t);
+    }, RESTART_DELAY_MS);
   });
-  return child;
-});
+}
+
+for (const t of tasks) launch(t);
 
 function shutdown() {
+  shuttingDown = true;
   for (const c of children) {
     try {
       c.kill('SIGTERM');

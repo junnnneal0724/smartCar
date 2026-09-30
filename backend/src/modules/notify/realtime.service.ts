@@ -36,7 +36,27 @@ export class RealtimeService implements OnModuleDestroy {
     // 心跳：既保活，也让前端能判断连接是否健康
     this.heartbeat = setInterval(() => {
       this.subject.next({ topic: 'heartbeat', data: { sim: Date.now() }, ts: Date.now() });
+      this.watchMemory();
     }, 15000);
+  }
+
+  /**
+   * 自查：SSE 是永不结束的流，一旦有连接没被正确销毁，业务进程会一直往
+   * 没人读的缓冲区里推事件，最后以堆溢出收场（而且崩一次就是几小时之后，
+   * 完全看不出是这个原因）。这里把苗头提前写进日志。
+   */
+  private lastWarnAt = 0;
+  private watchMemory(): void {
+    const { subscribers, rssMb, heapUsedMb } = this.stats;
+    const now = Date.now();
+    if (now - this.lastWarnAt < 5 * 60 * 1000) return;
+    if (subscribers > 12 || heapUsedMb > 512) {
+      this.lastWarnAt = now;
+      this.logger.warn(
+        `实时推送连接数 ${subscribers}（历史峰值 ${this.peak}）、堆占用 ${heapUsedMb}MB、常驻 ${rssMb}MB，` +
+          `如果这些数字只涨不跌，多半是有 SSE 连接没被销毁`,
+      );
+    }
   }
 
   get stream$() {
@@ -50,7 +70,13 @@ export class RealtimeService implements OnModuleDestroy {
   get stats() {
     const count = this.subject.observers.length;
     this.peak = Math.max(this.peak, count);
-    return { subscribers: count, peak: this.peak };
+    const mem = process.memoryUsage();
+    return {
+      subscribers: count,
+      peak: this.peak,
+      heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+      rssMb: Math.round(mem.rss / 1024 / 1024),
+    };
   }
 
   onModuleDestroy(): void {

@@ -60,6 +60,13 @@ function proxy(req: http.IncomingMessage, res: http.ServerResponse): void {
     res.end(JSON.stringify({ code: 50200, message: `业务服务未就绪：${e.message}`, data: null, traceId: '' }));
   });
 
+  // 客户端断开时必须把上游连接一起销毁。
+  // SSE 是永不结束的流，只 pipe 不销毁的话，上游（业务进程）会一直以为还有人
+  // 在订阅，把之后每一个事件都推进一个没人读的缓冲区——浏览器标签页关掉、
+  // 或者标签页被系统挂起，业务进程的内存就会一路涨到堆上限然后崩掉。
+  res.on('close', () => upstream.destroy());
+  req.on('aborted', () => upstream.destroy());
+
   // 请求体原样透传（不解析，避免破坏 multipart 等）
   req.pipe(upstream);
 }
